@@ -2,8 +2,6 @@
 
 # Universidade Católica de Pernambuco (UNICAP)
 
-<img src="https://media.tenor.com/I5kylHJduP4AAAAj/disc-spinning.gif" width="120px">
-
 <br>
 
 ## Projeto Sistema de Comunicação Interna — C.I Digital
