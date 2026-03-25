@@ -20,7 +20,7 @@ A aplicação simula o fluxo de **C.I (Comunicação Interna)** entre setores, p
 
 ## 🎯 Objetivo
 
-O projeto tem como objetivo aplicar conceitos de:
+O projeto tem como objetivo:
 
 - Garantir controle e rastreabilidade das comunicações (C.I) 
 - Garantir que as informações sejam registradas e acompanhadas de forma confiável
