@@ -14,8 +14,6 @@
 
 ## ℹ️ Sobre o Projeto
 
-O **Sistema de Comunicação Interna — C.I Digital** foi desenvolvido como parte da disciplina de **Banco de Dados**, com o objetivo de **modelar e implementar uma solução para gerenciamento de comunicações internas em uma usina**.
-
 A aplicação simula o fluxo de **C.I (Comunicação Interna)** entre setores, permitindo o envio, controle e acompanhamento de documentos, garantindo **organização, rastreabilidade e segurança das informações**.
 
 ---
@@ -28,9 +26,6 @@ O projeto tem como objetivo aplicar conceitos de:
 - Normalização  
 - Relacionamentos entre entidades  
 - Manipulação de dados  
-
-Além disso, busca simular um cenário real de **comunicação corporativa**, focando na melhoria da **eficiência operacional** e no **controle de informações internas**.
-
 ---
 
 ## ⚙️ Principais Funcionalidades
@@ -46,23 +41,12 @@ Além disso, busca simular um cenário real de **comunicação corporativa**, fo
 
 ## 🏭 Contexto de Aplicação
 
-O sistema foi pensado para uma **usina**, onde há grande volume de informações sendo compartilhadas entre setores.  
+O sistema foi pensado para  a **Usina Trapiche**, localizada em Recife(PE), onde há grande volume de informações sendo compartilhadas entre setores.  
 
 A proposta é centralizar essas comunicações, reduzindo falhas, atrasos e falta de rastreabilidade nos processos internos.
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
-
-| Tecnologia | Descrição |
-|-------------|------------|
-| **Python** | Implementação da lógica do sistema |
-| **MySQL** | Sistema de Gerenciamento de Banco de Dados |
-| **MySQL Connector** | Integração entre aplicação e banco |
-| **Figma** | Prototipação da interface do sistema |
-| **Git/GitHub** | Controle de versão e colaboração |
-
----
 
 ## 📊 Estrutura do Sistema
 
