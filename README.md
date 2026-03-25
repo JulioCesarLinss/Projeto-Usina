@@ -22,10 +22,9 @@ A aplicação simula o fluxo de **C.I (Comunicação Interna)** entre setores, p
 
 O projeto tem como objetivo aplicar conceitos de:
 
-- Modelagem de banco de dados  
-- Normalização  
-- Relacionamentos entre entidades  
-- Manipulação de dados  
+- Garantir controle e rastreabilidade das comunicações (C.I) 
+- Garantir que as informações sejam registradas e acompanhadas de forma confiável
+- Apoiar a organização e transparência dos processos internos da usina  
 ---
 
 ## ⚙️ Principais Funcionalidades
