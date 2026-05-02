@@ -55,3 +55,17 @@ const login = async (req, res) => {
         res.status(500).json({ erro: err.message });
     }
 }
+
+const buscarUsuario = async(req,res) => {
+    try{
+        const { id } = req.params;
+        const usuario = await buscarId(id);
+        if(!usuario){
+            return res.status(404).json({mensagem: 'ID inexistente'});
+        }
+        return res.status(200).json({usuario}) ; 
+
+    } catch (err){
+        res.status(500).json({ erro: err.message });
+    }
+}
