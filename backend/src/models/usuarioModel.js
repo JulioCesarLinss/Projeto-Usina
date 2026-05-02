@@ -1,72 +1,56 @@
-import connection from '../config/db.js';
+import pool from '../config/db.js';
 
-const criarUsuario = (nome,email,senha,cargo_id,departamento_id) => {
-    return new Promise((resolve, reject)=>{
-        const sql = 'INSERT INTO usuario (nome,email,senha,cargo_id,departamento_id) VALUES (?,?,?,?,?)';
-        
-        connection.query(sql, [nome,email,senha,cargo_id,departamento_id], (err, result)=>{
-            if(err) reject(err);
-            else resolve(result);
-        });
-    });
-}
+export const criarUsuario = async (nome, email, senha, cargo_id, departamento_id) => {
+  const sql = 'INSERT INTO usuario (nome, email, senha, cargo_id, departamento_id) VALUES (?, ?, ?, ?, ?)';
+  const [result] = await pool.query(sql, [nome, email, senha, cargo_id, departamento_id]);
+  return result;
+};
 
-const buscarEmail = (email)=>{
-    return new Promise((resolve,reject)=>{
-        const sql = 'SELECT * FROM usuario WHERE email = ?'
-        connection.query(sql,[email],(err,result)=>{
-            if(err){
-                reject(err);
-            }
-            else{
-                resolve(result[0]);
-            }
-        });
-    });
-}
+export const buscarEmail = async (email) => {
+  const sql = 'SELECT id, nome, email, cargo_id, departamento_id FROM usuario WHERE email = ?';
+  const [results] = await pool.query(sql, [email]);
+  return results[0];
+};
 
-const buscarId = (id) =>{
-    return new Promise((resolve,reject)=>{
-        const sql = 'SELECT * FROM usuario WHERE id = ?'
-        connection.query(sql,[id],(err,result)=>{
-            if(err){
-                reject(err);
-            }
-            else{
-                resolve(result[0]);
-            }
-        });
-    });
-}
+export const buscarSenhaEmail = async (email) => {
+  const sql = 'SELECT id, nome, email, senha, cargo_id, departamento_id FROM usuario WHERE email = ?';
+  const [results] = await pool.query(sql, [email]);
+  return results[0];
+};
 
-const listarUsuarios = () =>{
-    return new Promise((resolve,reject)=>{
-        const sql = 'SELECT * FROM usuario'
-        connection.query(sql, (err, results)=>{
-            if(err) reject(err);
-            else resolve(results);
-        });
-    });
-}
+export const buscarId = async (id) => {
+  const sql = 'SELECT id, nome, email, cargo_id, departamento_id FROM usuario WHERE id = ?';
+  const [results] = await pool.query(sql, [id]);
+  return results[0];
+};
 
-const atualizarUsuario = (id, nome, email, senha, cargo_id, departamento_id) =>{
-    return new Promise((resolve,reject)=>{
-        const sql = 'UPDATE usuario SET nome = ?, email = ?, senha = ?, cargo_id = ?, departamento_id = ? WHERE id = ?';
-        connection.query(sql, [nome, email, senha, cargo_id, departamento_id, id], (err, results)=>{
-            if(err) reject(err);
-            else resolve(results);
-        });
-    });
-}
+export const listarUsuarios = async (pagina = 1, limite = 20) => {
+  const offset = (pagina - 1) * limite;
+  const sql = 'SELECT id, nome, email, cargo_id, departamento_id FROM usuario LIMIT ? OFFSET ?';
+  const [results] = await pool.query(sql, [limite, offset]);
+  return results;
+};
 
-const deletarUsuario = (id)=>{
-    return new Promise((resolve,reject)=>{
-        const sql = 'DELETE FROM usuario WHERE id = ?';
-        connection.query(sql, [id], (err, results)=>{
-            if(err) reject(err);
-            else resolve(results);
-        });
-    });
-}
+export const listarTodos = async () => {
+  const sql = 'SELECT id, nome, email, cargo_id, departamento_id FROM usuario';
+  const [results] = await pool.query(sql);
+  return results;
+};
 
-export { criarUsuario, buscarEmail, bucarId, listarUsuarios, atualizarUsuario, deletarUsuario };
+export const atualizarUsuario = async (id, nome, email, cargo_id, departamento_id) => {
+  const sql = 'UPDATE usuario SET nome = ?, email = ?, cargo_id = ?, departamento_id = ? WHERE id = ?';
+  const [result] = await pool.query(sql, [nome, email, cargo_id, departamento_id, id]);
+  return result;
+};
+
+export const atualizarSenha = async (id, novaSenha) => {
+  const sql = 'UPDATE usuario SET senha = ? WHERE id = ?';
+  const [result] = await pool.query(sql, [novaSenha, id]);
+  return result;
+};
+
+export const deletarUsuario = async (id) => {
+  const sql = 'DELETE FROM usuario WHERE id = ?';
+  const [result] = await pool.query(sql, [id]);
+  return result;
+};

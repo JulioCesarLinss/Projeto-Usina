@@ -1,14 +1,41 @@
 import dotenv from 'dotenv';
-import mysql from 'mysql2';
+import mysql from 'mysql2/promise';
 
 dotenv.config();
-console.log(process.env.DB_HOST, process.env.DB_USER, process.env.DB_PASSWORD, process.env.DB_NAME);
 
-const connection = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
+
+const requiredEnvVars = ['DB_HOST', 'DB_USER', 'DB_NAME'];
+requiredEnvVars.forEach((envVar) => {
+  if (!process.env[envVar]) {
+    console.error(` ERRO: Variável de ambiente ${envVar} não está configurada`);
+    process.exit(1);
+  }
 });
 
-export default connection;
+
+const connectionLimit = parseInt(process.env.DB_CONNECTION_LIMIT) || 10;
+
+
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: connectionLimit,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelayMs: 0
+});
+
+// Testar conexão na inicialização
+try {
+  const connection = await pool.getConnection();
+  console.log(' Pool de conexões MySQL conectado com sucesso');
+  connection.release();
+} catch (err) {
+  console.error('Erro ao conectar ao banco de dados:', err.message);
+  process.exit(1);
+}
+
+export default pool;
