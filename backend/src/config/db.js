@@ -37,5 +37,5 @@ try {
   console.error('Erro ao conectar ao banco de dados:', err.message);
   process.exit(1);
 }
-
+console.log('DB_HOST:', process.env.DB_HOST);
 export default pool;

@@ -7,18 +7,17 @@ export const handleError = (err, req, res, next) => {
     mensagem: err.message,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
-==
+
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       sucesso: false,
       tipo: err.tipo,
       erro: err.message,
       codigo: err.codigo,
-      ...(err.erros && { erros: err.erros }) // Se houver array de validações
+      ...(err.erros && { erros: err.erros }) 
     });
   }
 
-  // ==================== ERRO DE BANCO DE DADOS ====================
   if (err.code && /^ER_|^PROTOCOL_/.test(err.code)) {
     console.error(' ERRO DE BANCO:', err.code, err.sqlMessage);
 
