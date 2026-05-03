@@ -69,4 +69,4 @@ const deletarUsuario = (id)=>{
     });
 }
 
-export { criarUsuario, buscarEmail, bucarId, listarUsuarios, atualizarUsuario, deletarUsuario };
+export { criarUsuario, buscarEmail, buscarId, listarUsuarios, atualizarUsuario, deletarUsuario };
