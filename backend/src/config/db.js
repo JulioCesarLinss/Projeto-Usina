@@ -28,7 +28,7 @@ const pool = mysql.createPool({
   keepAliveInitialDelayMs: 0
 });
 
-// Testar conexão na inicialização
+
 try {
   const connection = await pool.getConnection();
   console.log(' Pool de conexões MySQL conectado com sucesso');
@@ -37,5 +37,5 @@ try {
   console.error('Erro ao conectar ao banco de dados:', err.message);
   process.exit(1);
 }
-console.log('DB_HOST:', process.env.DB_HOST);
+
 export default pool;
