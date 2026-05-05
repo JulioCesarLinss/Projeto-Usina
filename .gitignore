@@ -27,3 +27,5 @@ Thumbs.db
 
 # Variáveis de desenvolvimento (usar .env.example)
 .env.development.local
+
+database/cigital.sql
