@@ -1,60 +1,112 @@
 import jwt from 'jsonwebtoken';
 import { AuthenticationError, AuthorizationError } from '../utils/appError.js';
 
+// Lista de tokens cancelados pelo logout
+const tokenBlacklist = new Set();
+const blacklistExpiry = new Map();
+
+// Limpa tokens antigos da lista a cada hora
+// Tokens expirados não precisam ficar na lista para sempre
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, expiry] of blacklistExpiry.entries()) {
+    if (now > expiry) {
+      tokenBlacklist.delete(token);
+      blacklistExpiry.delete(token);
+    }
+  }
+}, 60 * 60 * 1000);
+
+// Chamada no logout para cancelar o token imediatamente
+export const revogarToken = (token) => {
+  tokenBlacklist.add(token);
+  // Fica na blacklist pelo mesmo tempo que o token duraria (8 horas)
+  blacklistExpiry.set(token, Date.now() + 8 * 60 * 60 * 1000);
+};
+
 export const verificarToken = (req, res, next) => {
   try {
-  
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader) {
-      throw new AuthenticationError(
-        'Token ausente',
-        'TOKEN_AUSENTE'
-      );
-    }
+
+    if (!authHeader)
+      throw new AuthenticationError('Token ausente', 'TOKEN_AUSENTE');
 
     const partes = authHeader.split(' ');
-    if (partes.length !== 2 || partes[0] !== 'Bearer') {
+    if (partes.length !== 2 || partes[0] !== 'Bearer')
       throw new AuthenticationError(
-        'Formato de token inválido',
+        'Formato inválido. Use: Bearer <token>',
         'FORMATO_INVALIDO'
       );
-    }
 
     const token = partes[1];
 
-    if (!process.env.JWT_SECRET) {
-      console.error(' JWT_SECRET não configurada');
-      throw new Error('Erro ao verificar token');
-    }
+    // Verifica se o token foi cancelado por logout
+    if (tokenBlacklist.has(token))
+      throw new AuthenticationError(
+        'Token revogado. Faça login novamente',
+        'TOKEN_REVOGADO'
+      );
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Adicionar dados do usuário ao request
-    req.usuario = decoded;
-    
+    // algorithms: ['HS256'] bloqueia o ataque "algorithm: none"
+    // Sem isso um hacker criaria token sem assinatura e o sistema aceitaria
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ['HS256']
+    });
+
+    // Verifica se o token tem todos os campos necessários
+    if (!decoded.id || !decoded.email || !decoded.cargo_id)
+      throw new AuthenticationError('Token inválido', 'PAYLOAD_INVALIDO');
+
+    // Guarda só o necessário — não expõe dados extras
+    req.usuario = {
+      id: decoded.id,
+      email: decoded.email,
+      cargo_id: decoded.cargo_id
+    };
+
+    // Guardado para uso no logout
+    req._token = token;
+
     next();
+  } catch (err) {
+    if (err instanceof AuthenticationError) return next(err);
+    if (err.name === 'JsonWebTokenError')
+      return next(new AuthenticationError('Token inválido', 'TOKEN_INVALIDO'));
+    if (err.name === 'TokenExpiredError')
+      return next(new AuthenticationError('Token expirado', 'TOKEN_EXPIRADO'));
+    next(err);
+  }
+};
 
+// Verifica se o usuário é administrador (cargo_id === 1)
+export const verificarAdmin = (req, res, next) => {
+  try {
+    if (!req.usuario)
+      throw new AuthenticationError('Não autenticado', 'NAO_AUTENTICADO');
+
+    if (req.usuario.cargo_id !== 1)
+      throw new AuthorizationError('Apenas administradores', 'APENAS_ADMIN');
+
+    next();
   } catch (err) {
     next(err);
   }
 };
 
-export const verificarAdmin = (req, res, next) => {
+// Garante que usuário só edita a si mesmo, a menos que seja admin
+export const verificarProprioOuAdmin = (req, res, next) => {
   try {
-    if (!req.usuario) {
-      throw new AuthenticationError(
-        'Usuário não autenticado',
-        'NAO_AUTENTICADO'
-      );
-    }
+    if (!req.usuario)
+      throw new AuthenticationError('Não autenticado', 'NAO_AUTENTICADO');
 
-    if (req.usuario.cargo_id !== 1) {
+    const isProprioUsuario = req.usuario.id === parseInt(req.params.id);
+    const isAdmin = req.usuario.cargo_id === 1;
+
+    if (!isProprioUsuario && !isAdmin)
       throw new AuthorizationError(
-        'Permissão insuficiente',
-        'NAO_AUTORIZADO'
+        'Sem permissão para este recurso',
+        'ACESSO_NEGADO'
       );
-    }
 
     next();
   } catch (err) {
