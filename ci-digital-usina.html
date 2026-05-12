@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C.I Digital — USGA / Usina Trapiche</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<style>
+  :root {
+    --usga-dark:   #2D6A10;
+    --usga-mid:    #43931F;
+    --usga-light:  #7AB260;
+    --usga-pale:   #D6EDCA;
+    --usga-xpale:  #EEF7E7;
+    --trap-brown:  #5A3A1A;
+    --trap-tan:    #C4974A;
+    --trap-light:  #F0E0C0;
+    --white:       #FAFCF8;
+    --surface:     #F2F7EE;
+    --border:      #D0E8C3;
+    --border-mid:  #B5D9A0;
+    --text-primary:#1A2E10;
+    --text-mid:    #3D5C2A;
+    --text-muted:  #6B8C58;
+    --text-faint:  #9AB882;
+    --danger:      #C8382A;
+    --warning:     #B07A18;
+    --info:        #1A6B9A;
+    --radius:      10px;
+    --radius-lg:   16px;
+    --shadow-sm:   0 1px 4px rgba(43,93,20,0.08);
+    --shadow-md:   0 4px 16px rgba(43,93,20,0.12);
+    --shadow-lg:   0 8px 32px rgba(43,93,20,0.16);
+    --font-body:   'DM Sans', sans-serif;
+    --font-display:'DM Serif Display', serif;
+    --sidebar-w:   260px;
+    --header-h:    64px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    min-height: 100vh;
+    background: var(--usga-dark);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .sidebar-brand {
+    padding: 22px 20px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand-logos {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .brand-logo-usga {
+    background: white;
+    border-radius: 6px;
+    padding: 3px 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .brand-logo-usga svg { width: 80px; height: 22px; }
+
+  .brand-logo-trap {
+    font-family: var(--font-display);
+    color: rgba(255,255,255,0.5);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    padding-left: 2px;
+  }
+
+  .brand-system {
+    flex: 1;
+  }
+
+  .brand-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: white;
+    line-height: 1.2;
+  }
+
+  .brand-subtitle {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+
+  .sidebar-user {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 6px;
+  }
+
+  .user-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--usga-mid);
+    border: 2px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { font-size: 13px; font-weight: 500; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-dept { font-size: 11px; color: rgba(255,255,255,0.45); }
+
+  .nav-section {
+    padding: 4px 10px 8px;
+    flex: 1;
+  }
+
+  .nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    padding: 10px 8px 4px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    color: rgba(255,255,255,0.65);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 13.5px;
+    font-weight: 400;
+    position: relative;
+  }
+
+  .nav-item:hover { background: rgba(255,255,255,0.07); color: white; }
+
+  .nav-item.active {
+    background: rgba(255,255,255,0.12);
+    color: white;
+    font-weight: 500;
+  }
+
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    background: var(--usga-light);
+    border-radius: 0 3px 3px 0;
+  }
+
+  .nav-item i { font-size: 17px; opacity: 0.85; flex-shrink: 0; }
+
+  .nav-badge {
+    margin-left: auto;
+    background: var(--usga-mid);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 20px;
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .nav-badge.urgent { background: var(--danger); }
+
+  .sidebar-footer {
+    padding: 12px 10px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    height: var(--header-h);
+    background: white;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .topbar-title {
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--text-primary);
+    flex: 1;
+  }
+
+  .topbar-title span {
+    color: var(--text-muted);
+    font-weight: 300;
+    font-size: 15px;
+  }
+
+  .topbar-actions { display: flex; align-items: center; gap: 10px; }
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    width: 220px;
+    transition: all 0.15s;
+  }
+
+  .search-box:focus-within {
+    border-color: var(--usga-mid);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(67,147,31,0.1);
+  }
+
+  .search-box i { color: var(--text-faint); font-size: 16px; }
+  .search-box input { border: none; background: none; outline: none; font-family: var(--font-body); font-size: 13px; color: var(--text-primary); width: 100%; }
+  .search-box input::placeholder { color: var(--text-faint); }
+
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-mid);
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .icon-btn:hover { background: var(--surface); border-color: var(--border-mid); color: var(--text-primary); }
+  .icon-btn i { font-size: 18px; }
+
+  .notif-dot {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 7px; height: 7px;
+    background: var(--danger);
+    border-radius: 50%;
+    border: 1.5px solid white;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: var(--radius);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--usga-mid);
+    color: white;
+    border-color: var(--usga-mid);
+  }
+
+  .btn-primary:hover { background: var(--usga-dark); border-color: var(--usga-dark); }
+  .btn i { font-size: 16px; }
+
+  /* ── PAGE CONTENT ── */
+  .page { padding: 28px; flex: 1; }
+
+  /* ── STATS ROW ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.15s;
+  }
+
+  .stat-card:hover { box-shadow: var(--shadow-md); }
+
+  .stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .stat-icon i { font-size: 20px; }
+
+  .stat-icon.green { background: var(--usga-xpale); color: var(--usga-mid); }
+  .stat-icon.amber { background: #FEF3DC; color: #A0700A; }
+  .stat-icon.red   { background: #FCEAE8; color: var(--danger); }
+  .stat-icon.blue  { background: #E8F2FA; color: var(--info); }
+
+  .stat-value {
+    font-size: 30px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-foot {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .stat-delta { font-weight: 600; }
+  .stat-delta.up { color: var(--usga-mid); }
+  .stat-delta.down { color: var(--danger); }
+
+  /* ── CONTENT GRID ── */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title i { color: var(--usga-mid); font-size: 18px; }
+
+  .card-actions { display: flex; align-items: center; gap: 6px; }
+
+  .btn-ghost {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 5px 12px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-mid);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s;
+  }
+
+  .btn-ghost:hover { background: var(--surface); border-color: var(--border-mid); }
+  .btn-ghost i { font-size: 14px; }
+
+  /* ── CI TABLE ── */
+  .ci-table { width: 100%; border-collapse: collapse; }
+
+  .ci-table thead th {
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  .ci-table tbody tr {
+    border-bottom: 1px solid rgba(208,232,195,0.5);
+    transition: background 0.12s;
+    cursor: pointer;
+  }
+
+  .ci-table tbody tr:last-child { border-bottom: none; }
+  .ci-table tbody tr:hover { background: var(--usga-xpale); }
+
+  .ci-table td {
+    padding: 13px 16px;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+
+  .ci-num {
+    font-family: 'DM Sans', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--usga-dark);
+    background: var(--usga-xpale);
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  .ci-subject {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .ci-subject small {
+    display: block;
+    font-weight: 400;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+
+  .dept-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 9px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-mid);
+    white-space: nowrap;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .status-badge::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .status-badge.pending   { background: #FEF3DC; color: #8A6010; }
+  .status-badge.read      { background: var(--usga-xpale); color: var(--usga-dark); }
+  .status-badge.unread    { background: #FCEAE8; color: #8A1A10; }
+  .status-badge.archived  { background: #F0F0EC; color: #666; }
+
+  .priority-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .priority-dot.high   { background: var(--danger); box-shadow: 0 0 0 3px rgba(200,56,42,0.12); }
+  .priority-dot.medium { background: var(--warning); }
+  .priority-dot.low    { background: var(--usga-light); }
+
+  .ci-date {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .attach-icon { color: var(--text-faint); font-size: 15px; vertical-align: middle; }
+
+  /* ── RIGHT COLUMN ── */
+  .right-col { display: flex; flex-direction: column; gap: 20px; }
+
+  /* ── NOTIFICATION PANEL ── */
+  .notif-list { padding: 4px 0; }
+
+  .notif-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(208,232,195,0.4);
+    cursor: pointer;
+    transition: background 0.12s;
+    align-items: flex-start;
+  }
+
+  .notif-item:last-child { border-bottom: none; }
+  .notif-item:hover { background: var(--surface); }
+
+  .notif-item.unread { background: var(--usga-xpale); }
+  .notif-item.unread:hover { background: var(--usga-pale); }
+
+  .notif-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .notif-icon.send  { background: var(--usga-xpale); color: var(--usga-mid); }
+  .notif-icon.recv  { background: #E8F2FA; color: var(--info); }
+  .notif-icon.alert { background: #FCEAE8; color: var(--danger); }
+  .notif-icon i { font-size: 16px; }
+
+  .notif-body { flex: 1; min-width: 0; }
+  .notif-text { font-size: 12.5px; color: var(--text-primary); line-height: 1.4; }
+  .notif-text strong { font-weight: 600; }
+  .notif-time { font-size: 11px; color: var(--text-faint); margin-top: 3px; }
+  .notif-unread-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--usga-mid); flex-shrink: 0; margin-top: 5px; }
+
+  /* ── MINI CALENDAR / DEPT FILTER ── */
+  .dept-list { padding: 12px 20px; display: flex; flex-direction: column; gap: 8px; }
+
+  .dept-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-mid);
+    padding: 6px 8px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+
+  .dept-row:hover { background: var(--surface); }
+
+  .dept-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .dept-row .count {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1px 7px;
+  }
+
+  /* ── NEW C.I FORM ── */
+  .ci-form { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-mid);
+    letter-spacing: 0.02em;
+  }
+
+  input[type="text"],
+  input[type="date"],
+  select,
+  textarea {
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 11px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-primary);
+    outline: none;
+    transition: all 0.15s;
+    width: 100%;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--usga-mid);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(67,147,31,0.1);
+  }
+
+  textarea { resize: vertical; min-height: 80px; }
+
+  .upload-area {
+    border: 1.5px dashed var(--border-mid);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--surface);
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .upload-area:hover { border-color: var(--usga-mid); background: var(--usga-xpale); }
+  .upload-area i { font-size: 24px; color: var(--usga-light); }
+  .upload-area p { font-size: 12px; color: var(--text-muted); }
+  .upload-area strong { color: var(--usga-mid); }
+
+  .form-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+
+  /* ── AUDIT TRAIL ── */
+  .audit-list { padding: 8px 20px 16px; }
+
+  .audit-item {
+    display: flex;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(208,232,195,0.3);
+    font-size: 12.5px;
+  }
+
+  .audit-item:last-child { border-bottom: none; }
+
+  .audit-line {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    position: relative;
+  }
+
+  .audit-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--usga-light);
+    margin-top: 4px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .audit-connector {
+    width: 1px;
+    flex: 1;
+    background: var(--border);
+    margin-top: 2px;
+  }
+
+  .audit-body { flex: 1; padding-bottom: 8px; }
+  .audit-action { color: var(--text-primary); }
+  .audit-action strong { color: var(--usga-dark); }
+  .audit-meta { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+  /* ── MODAL OVERLAY ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,25,8,0.45);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 600px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.2s ease;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+  }
+
+  .modal-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .modal-close {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: var(--surface);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 18px;
+    transition: all 0.12s;
+  }
+
+  .modal-close:hover { background: #FCEAE8; color: var(--danger); }
+
+  .modal-body { padding: 22px; }
+
+  .modal-ci-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 18px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .modal-field label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+  .modal-field p { font-size: 14px; color: var(--text-primary); margin-top: 3px; }
+
+  .ci-body-text {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-primary);
+    padding: 16px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+
+  .modal-footer {
+    padding: 16px 22px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .read-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--usga-xpale);
+    border: 1px solid var(--usga-pale);
+    border-radius: var(--radius);
+    font-size: 12.5px;
+    color: var(--usga-dark);
+    margin: 16px 0;
+  }
+
+  .read-indicator i { font-size: 16px; }
+
+  /* ── PAGINATION ── */
+  .table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .table-info { font-size: 12px; color: var(--text-muted); }
+
+  .pagination { display: flex; gap: 4px; }
+
+  .page-btn {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: white;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-mid);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+  }
+
+  .page-btn:hover { background: var(--surface); border-color: var(--border-mid); }
+  .page-btn.active { background: var(--usga-mid); color: white; border-color: var(--usga-mid); }
+  .page-btn i { font-size: 15px; }
+
+  /* ── HEADER BAND (decorative accent on top) ── */
+  .top-accent {
+    height: 3px;
+    background: linear-gradient(90deg, var(--usga-dark) 0%, var(--usga-mid) 50%, var(--usga-light) 100%);
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 999;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--usga-light); }
+
+  /* ── TABS ── */
+  .tab-bar {
+    display: flex;
+    gap: 2px;
+    padding: 14px 20px 0;
+    border-bottom: 1px solid var(--border);
+    background: white;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: var(--radius) var(--radius) 0 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tab:hover { color: var(--text-primary); background: var(--surface); }
+
+  .tab.active {
+    color: var(--usga-mid);
+    border-bottom-color: var(--usga-mid);
+    background: none;
+  }
+
+  .tab-count {
+    font-size: 11px;
+    background: var(--usga-xpale);
+    color: var(--usga-dark);
+    border-radius: 20px;
+    padding: 0 6px;
+    font-weight: 600;
+  }
+
+  .tab.active .tab-count { background: var(--usga-mid); color: white; }
+
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: white;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .filter-bar select {
+    padding: 5px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 12px;
+    color: var(--text-mid);
+    cursor: pointer;
+    max-width: 160px;
+  }
+
+  .filter-sep { width: 1px; height: 20px; background: var(--border); margin: 0 2px; }
+
+  /* ── RESPONSIVENESS ── */
+  @media (max-width: 1100px) {
+    .content-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-accent"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logos">
+      <div class="brand-logo-usga">
+        <!-- USGA logo simplified inline -->
+        <svg viewBox="0 0 120 34" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="12,2 22,2 30,10 22,18 12,18 4,10" fill="#43931F"/>
+          <polygon points="32,2 42,2 50,10 42,18 32,18 24,10" fill="#7AB260"/>
+          <text x="56" y="14" font-family="'DM Serif Display',serif" font-size="15" fill="#2D6A10" font-weight="700">USGA</text>
+          <text x="56" y="25" font-family="'DM Sans',sans-serif" font-size="7.5" fill="#5A8A40" letter-spacing="0.5">USINA &amp; GRUPO</text>
+        </svg>
+      </div>
+      <div class="brand-logo-trap">TRAPICHE · RECIFE PE</div>
+    </div>
+    <div class="brand-system">
+      <div class="brand-name">C.I Digital</div>
+      <div class="brand-subtitle">Comunicação Interna</div>
+    </div>
+  </div>
+
+  <div class="sidebar-user">
+    <div class="user-avatar">JS</div>
+    <div class="user-info">
+      <div class="user-name">João Silva</div>
+      <div class="user-dept">Depto. Industrial</div>
+    </div>
+    <i class="ti ti-settings" style="color:rgba(255,255,255,0.3);font-size:16px;cursor:pointer"></i>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Principal</div>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <i class="ti ti-layout-dashboard"></i>
+      Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('cis')">
+      <i class="ti ti-file-text"></i>
+      Minhas C.I
+      <span class="nav-badge">3</span>
+    </div>
+    <div class="nav-item" onclick="showPage('nova')">
+      <i class="ti ti-send"></i>
+      Nova C.I
+    </div>
+    <div class="nav-item" onclick="showPage('docs')">
+      <i class="ti ti-folder"></i>
+      Documentos
+    </div>
+    <div class="nav-label">Gerencial</div>
+    <div class="nav-item" onclick="showPage('dashboard')">
+      <i class="ti ti-users"></i>
+      Departamentos
+    </div>
+    <div class="nav-item" onclick="showPage('auditoria')">
+      <i class="ti ti-activity"></i>
+      Auditoria
+    </div>
+    <div class="nav-item" onclick="showPage('dashboard')">
+      <i class="ti ti-chart-bar"></i>
+      Relatórios
+    </div>
+    <div class="nav-label">Sistema</div>
+    <div class="nav-item" onclick="showPage('dashboard')">
+      <i class="ti ti-bell"></i>
+      Notificações
+      <span class="nav-badge urgent">5</span>
+    </div>
+    <div class="nav-item" onclick="showPage('dashboard')">
+      <i class="ti ti-lock"></i>
+      Controle de Acesso
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="nav-item" onclick="showPage('dashboard')">
+      <i class="ti ti-help-circle"></i>
+      Ajuda & Suporte
+    </div>
+    <div class="nav-item" onclick="showPage('dashboard')">
+      <i class="ti ti-logout"></i>
+      Sair
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-title" id="page-title">
+      Dashboard <span>/ Visão Geral</span>
+    </div>
+    <div class="topbar-actions">
+      <div class="search-box">
+        <i class="ti ti-search"></i>
+        <input type="text" placeholder="Buscar C.I, setor, data...">
+      </div>
+      <div class="icon-btn" title="Notificações">
+        <i class="ti ti-bell"></i>
+        <span class="notif-dot"></span>
+      </div>
+      <div class="icon-btn" title="Calendário">
+        <i class="ti ti-calendar"></i>
+      </div>
+      <button class="btn btn-primary" onclick="showModal()">
+        <i class="ti ti-plus"></i>
+        Nova C.I
+      </button>
+    </div>
+  </header>
+
+  <!-- PAGE: DASHBOARD -->
+  <div class="page" id="page-dashboard">
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-label">C.I Enviadas</div>
+          <div class="stat-icon green"><i class="ti ti-send"></i></div>
+        </div>
+        <div class="stat-value">47</div>
+        <div class="stat-foot">
+          <span class="stat-delta up"><i class="ti ti-trending-up" style="font-size:13px"></i> +12%</span>
+          vs mês anterior
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-label">Pendentes de Leitura</div>
+          <div class="stat-icon amber"><i class="ti ti-clock"></i></div>
+        </div>
+        <div class="stat-value">8</div>
+        <div class="stat-foot">
+          <span class="stat-delta down"><i class="ti ti-trending-up" style="font-size:13px"></i> +3</span>
+          desde ontem
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-label">Em Atraso</div>
+          <div class="stat-icon red"><i class="ti ti-alert-triangle"></i></div>
+        </div>
+        <div class="stat-value">2</div>
+        <div class="stat-foot">
+          <span class="stat-delta down">Prazo vencido</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-label">Arquivadas (mês)</div>
+          <div class="stat-icon blue"><i class="ti ti-archive"></i></div>
+        </div>
+        <div class="stat-value">124</div>
+        <div class="stat-foot">
+          <span class="stat-delta up"><i class="ti ti-trending-up" style="font-size:13px"></i> +8%</span>
+          vs mês anterior
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENT GRID -->
+    <div class="content-grid">
+
+      <!-- LEFT: C.I TABLE -->
+      <div class="card">
+        <div class="tab-bar">
+          <div class="tab active">Recebidas <span class="tab-count">12</span></div>
+          <div class="tab">Enviadas <span class="tab-count">47</span></div>
+          <div class="tab">Pendentes <span class="tab-count">8</span></div>
+          <div class="tab">Arquivadas</div>
+        </div>
+        <div class="filter-bar">
+          <i class="ti ti-filter" style="color:var(--text-faint);font-size:16px"></i>
+          <select><option>Todos os departamentos</option><option>Industrial</option><option>Financeiro</option><option>RH</option><option>Qualidade</option></select>
+          <select><option>Qualquer prioridade</option><option>Alta</option><option>Média</option><option>Baixa</option></select>
+          <div class="filter-sep"></div>
+          <select style="max-width:130px"><option>Mais recente</option><option>Mais antigo</option><option>Por setor</option></select>
+        </div>
+
+        <table class="ci-table">
+          <thead>
+            <tr>
+              <th style="width:36px"></th>
+              <th>Número</th>
+              <th>Assunto / Remetente</th>
+              <th>Destino</th>
+              <th>Status</th>
+              <th>Data</th>
+              <th style="width:30px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr onclick="openCI('CI-2025-047', 'Procedimento de Manutenção — Caldeira B3', 'Industrial', 'Manutenção', 'Alta', '09/05/2025', 'Informamos a necessidade de parada programada para manutenção preventiva da caldeira B3. O procedimento seguirá o protocolo NR-13 e está agendado para 15/05/2025 entre 06h00 e 10h00. Solicitamos a disponibilização da equipe de segurança durante todo o período.', 'Paulo Mendes')">
+              <td><span class="priority-dot high"></span></td>
+              <td><span class="ci-num">CI-2025-047</span></td>
+              <td class="ci-subject">Procedimento de Manutenção — Caldeira B3<small>Paulo Mendes · Depto. Industrial</small></td>
+              <td><span class="dept-tag"><i class="ti ti-tool" style="font-size:11px"></i> Manutenção</span></td>
+              <td><span class="status-badge unread">Não lido</span></td>
+              <td class="ci-date">09/05/2025</td>
+              <td><i class="ti ti-paperclip attach-icon"></i></td>
+            </tr>
+            <tr onclick="openCI('CI-2025-046', 'Relatório de Qualidade — Lote 820', 'Qualidade', 'Industrial', 'Média', '08/05/2025', 'Segue em anexo o relatório de análise do lote 820 referente à produção do mês de abril. Foram identificados desvios nos parâmetros de sacarose que requerem avaliação da equipe industrial. Favor retornar com posicionamento em até 48 horas.', 'Ana Carvalho')">
+              <td><span class="priority-dot medium"></span></td>
+              <td><span class="ci-num">CI-2025-046</span></td>
+              <td class="ci-subject">Relatório de Qualidade — Lote 820<small>Ana Carvalho · Qualidade</small></td>
+              <td><span class="dept-tag"><i class="ti ti-flask" style="font-size:11px"></i> Industrial</span></td>
+              <td><span class="status-badge pending">Pendente</span></td>
+              <td class="ci-date">08/05/2025</td>
+              <td><i class="ti ti-paperclip attach-icon"></i></td>
+            </tr>
+            <tr onclick="openCI('CI-2025-045', 'Solicitação de Férias Coletivas', 'RH', 'Todos os Dptos', 'Baixa', '07/05/2025', 'Comunicamos que a diretoria deliberou sobre o período de férias coletivas que ocorrerá de 20/12/2025 a 03/01/2026. Solicitamos que todos os gestores realizem o planejamento de escala para garantir a continuidade das operações críticas.', 'Carla Brito')">
+              <td><span class="priority-dot low"></span></td>
+              <td><span class="ci-num">CI-2025-045</span></td>
+              <td class="ci-subject">Solicitação de Férias Coletivas<small>Carla Brito · RH</small></td>
+              <td><span class="dept-tag"><i class="ti ti-building" style="font-size:11px"></i> Todos os Dptos</span></td>
+              <td><span class="status-badge read">Lido</span></td>
+              <td class="ci-date">07/05/2025</td>
+              <td></td>
+            </tr>
+            <tr onclick="openCI('CI-2025-044', 'Orçamento — Substituição Esteiras', 'Financeiro', 'Industrial', 'Alta', '06/05/2025', 'Conforme solicitado, encaminhamos os três orçamentos obtidos para substituição das esteiras transportadoras do setor de moagem. A proposta com melhor custo-benefício é do fornecedor Mecatrans Ltda no valor de R$ 87.500,00. Aguardamos aprovação para emissão de PO.', 'Ricardo Leal')">
+              <td><span class="priority-dot high"></span></td>
+              <td><span class="ci-num">CI-2025-044</span></td>
+              <td class="ci-subject">Orçamento — Substituição Esteiras<small>Ricardo Leal · Financeiro</small></td>
+              <td><span class="dept-tag"><i class="ti ti-tool" style="font-size:11px"></i> Industrial</span></td>
+              <td><span class="status-badge unread">Não lido</span></td>
+              <td class="ci-date">06/05/2025</td>
+              <td><i class="ti ti-paperclip attach-icon"></i></td>
+            </tr>
+            <tr onclick="openCI('CI-2025-043', 'Treinamento NR-10 — Equipe Elétrica', 'Segurança', 'Manutenção', 'Média', '05/05/2025', 'Informamos que o treinamento de reciclagem NR-10 será realizado nos dias 19 e 20 de maio de 2025 nas instalações do SENAI. A participação é obrigatória para todos os eletricistas e técnicos do setor de manutenção elétrica. As inscrições devem ser confirmadas até 12/05.', 'Fernanda Costa')">
+              <td><span class="priority-dot medium"></span></td>
+              <td><span class="ci-num">CI-2025-043</span></td>
+              <td class="ci-subject">Treinamento NR-10 — Equipe Elétrica<small>Fernanda Costa · Segurança</small></td>
+              <td><span class="dept-tag"><i class="ti ti-shield" style="font-size:11px"></i> Manutenção</span></td>
+              <td><span class="status-badge read">Lido</span></td>
+              <td class="ci-date">05/05/2025</td>
+              <td></td>
+            </tr>
+            <tr onclick="openCI('CI-2025-042', 'Atualização Política de Segurança da Informação', 'TI', 'Todos os Dptos', 'Média', '02/05/2025', 'Comunicamos a atualização da Política de Segurança da Informação conforme a resolução da diretoria. As principais mudanças incluem autenticação em dois fatores obrigatória e classificação de documentos confidenciais. O documento completo está disponível no portal interno.', 'Marcos Oliveira')">
+              <td><span class="priority-dot medium"></span></td>
+              <td><span class="ci-num">CI-2025-042</span></td>
+              <td class="ci-subject">Atualização Política de Segurança<small>Marcos Oliveira · TI</small></td>
+              <td><span class="dept-tag"><i class="ti ti-building" style="font-size:11px"></i> Todos os Dptos</span></td>
+              <td><span class="status-badge archived">Arquivado</span></td>
+              <td class="ci-date">02/05/2025</td>
+              <td><i class="ti ti-paperclip attach-icon"></i></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="table-footer">
+          <div class="table-info">Exibindo <strong>1–6</strong> de <strong>47</strong> comunicações</div>
+          <div class="pagination">
+            <button class="page-btn"><i class="ti ti-chevron-left"></i></button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <button class="page-btn">…</button>
+            <button class="page-btn">8</button>
+            <button class="page-btn"><i class="ti ti-chevron-right"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="right-col">
+
+        <!-- NOTIFICATIONS -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-bell"></i> Notificações</div>
+            <button class="btn-ghost"><i class="ti ti-check"></i> Marcar todas</button>
+          </div>
+          <div class="notif-list">
+            <div class="notif-item unread">
+              <div class="notif-icon alert"><i class="ti ti-alert-circle"></i></div>
+              <div class="notif-body">
+                <div class="notif-text"><strong>CI-2025-047</strong> aguarda sua leitura há 2 dias — prazo a vencer</div>
+                <div class="notif-time">Há 10 minutos</div>
+              </div>
+              <div class="notif-unread-dot"></div>
+            </div>
+            <div class="notif-item unread">
+              <div class="notif-icon recv"><i class="ti ti-file-download"></i></div>
+              <div class="notif-body">
+                <div class="notif-text"><strong>Ana Carvalho</strong> enviou nova C.I para seu departamento</div>
+                <div class="notif-time">Há 1 hora</div>
+              </div>
+              <div class="notif-unread-dot"></div>
+            </div>
+            <div class="notif-item unread">
+              <div class="notif-icon send"><i class="ti ti-circle-check"></i></div>
+              <div class="notif-body">
+                <div class="notif-text"><strong>CI-2025-040</strong> foi lida por todos os destinatários</div>
+                <div class="notif-time">Há 3 horas</div>
+              </div>
+              <div class="notif-unread-dot"></div>
+            </div>
+            <div class="notif-item">
+              <div class="notif-icon recv"><i class="ti ti-file-text"></i></div>
+              <div class="notif-body">
+                <div class="notif-text"><strong>Ricardo Leal</strong> respondeu CI-2025-038</div>
+                <div class="notif-time">Ontem, 16:42</div>
+              </div>
+            </div>
+            <div class="notif-item">
+              <div class="notif-icon alert"><i class="ti ti-clock"></i></div>
+              <div class="notif-body">
+                <div class="notif-text">Lembrete: <strong>CI-2025-044</strong> aguarda aprovação financeira</div>
+                <div class="notif-time">Ontem, 09:00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DEPARTMENTS -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-building"></i> Por Departamento</div>
+          </div>
+          <div class="dept-list">
+            <div class="dept-row">
+              <span class="dept-dot" style="background:#43931F"></span>
+              Industrial
+              <span class="count">14</span>
+            </div>
+            <div class="dept-row">
+              <span class="dept-dot" style="background:#1A6B9A"></span>
+              Financeiro
+              <span class="count">9</span>
+            </div>
+            <div class="dept-row">
+              <span class="dept-dot" style="background:#B07A18"></span>
+              RH & Pessoal
+              <span class="count">7</span>
+            </div>
+            <div class="dept-row">
+              <span class="dept-dot" style="background:#7AB260"></span>
+              Qualidade
+              <span class="count">6</span>
+            </div>
+            <div class="dept-row">
+              <span class="dept-dot" style="background:#C8382A"></span>
+              Segurança
+              <span class="count">5</span>
+            </div>
+            <div class="dept-row">
+              <span class="dept-dot" style="background:#888"></span>
+              TI
+              <span class="count">3</span>
+            </div>
+            <div class="dept-row">
+              <span class="dept-dot" style="background:#5A3A1A"></span>
+              Manutenção
+              <span class="count">3</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- AUDIT TRAIL -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-activity"></i> Histórico Recente</div>
+            <button class="btn-ghost" onclick="showPage('auditoria')">Ver tudo</button>
+          </div>
+          <div class="audit-list">
+            <div class="audit-item">
+              <div class="audit-line">
+                <div class="audit-dot" style="background:var(--danger)"></div>
+                <div class="audit-connector"></div>
+              </div>
+              <div class="audit-body">
+                <div class="audit-action"><strong>CI-2025-047</strong> recebida e marcada como urgente</div>
+                <div class="audit-meta">Paulo Mendes · 09/05/2025 08:14</div>
+              </div>
+            </div>
+            <div class="audit-item">
+              <div class="audit-line">
+                <div class="audit-dot"></div>
+                <div class="audit-connector"></div>
+              </div>
+              <div class="audit-body">
+                <div class="audit-action"><strong>João Silva</strong> leu CI-2025-043</div>
+                <div class="audit-meta">08/05/2025 14:32</div>
+              </div>
+            </div>
+            <div class="audit-item">
+              <div class="audit-line">
+                <div class="audit-dot" style="background:var(--usga-mid)"></div>
+                <div class="audit-connector"></div>
+              </div>
+              <div class="audit-body">
+                <div class="audit-action"><strong>CI-2025-040</strong> arquivada automaticamente</div>
+                <div class="audit-meta">07/05/2025 00:00</div>
+              </div>
+            </div>
+            <div class="audit-item">
+              <div class="audit-line">
+                <div class="audit-dot"></div>
+              </div>
+              <div class="audit-body">
+                <div class="audit-action"><strong>CI-2025-045</strong> enviada para 12 destinatários</div>
+                <div class="audit-meta">Carla Brito · 07/05/2025 09:05</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: NOVA C.I -->
+  <div class="page" id="page-nova" style="display:none">
+    <div class="card" style="max-width:700px">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-send"></i> Nova Comunicação Interna</div>
+      </div>
+      <div class="ci-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Número da C.I</label>
+            <input type="text" value="CI-2025-048" readonly style="background:var(--usga-xpale);color:var(--usga-dark);font-weight:600">
+          </div>
+          <div class="form-group">
+            <label>Data</label>
+            <input type="date" value="2025-05-12">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Departamento Remetente</label>
+            <select>
+              <option selected>Industrial</option>
+              <option>Financeiro</option>
+              <option>RH & Pessoal</option>
+              <option>Qualidade</option>
+              <option>Segurança</option>
+              <option>TI</option>
+              <option>Manutenção</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Departamento Destinatário</label>
+            <select>
+              <option>Selecionar...</option>
+              <option>Todos os Departamentos</option>
+              <option>Industrial</option>
+              <option>Financeiro</option>
+              <option>RH & Pessoal</option>
+              <option>Qualidade</option>
+              <option>Segurança</option>
+              <option>TI</option>
+              <option>Manutenção</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label>Assunto</label>
+          <input type="text" placeholder="Informe o assunto da comunicação...">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Prioridade</label>
+            <select>
+              <option>Baixa</option>
+              <option selected>Média</option>
+              <option>Alta — Urgente</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Prazo de Resposta</label>
+            <input type="date">
+          </div>
+        </div>
+        <div class="form-group full">
+          <label>Corpo da Comunicação</label>
+          <textarea placeholder="Redigir a comunicação interna..." style="min-height:120px"></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Anexos</label>
+          <div class="upload-area">
+            <i class="ti ti-cloud-upload"></i>
+            <p><strong>Clique para selecionar</strong> ou arraste arquivos aqui</p>
+            <p>PDF, DOCX, XLSX, PNG — máx. 20 MB por arquivo</p>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-ghost"><i class="ti ti-device-floppy"></i> Salvar Rascunho</button>
+          <button class="btn btn-primary"><i class="ti ti-send"></i> Enviar C.I</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: AUDITORIA -->
+  <div class="page" id="page-auditoria" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-activity"></i> Registro de Auditoria</div>
+        <button class="btn-ghost"><i class="ti ti-download"></i> Exportar</button>
+      </div>
+      <div class="filter-bar">
+        <select><option>Todos os usuários</option></select>
+        <select><option>Todos os tipos</option></select>
+        <input type="date" style="max-width:140px;padding:5px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12px">
+        <span style="color:var(--text-muted);font-size:12px">até</span>
+        <input type="date" style="max-width:140px;padding:5px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12px">
+      </div>
+      <table class="ci-table">
+        <thead>
+          <tr>
+            <th>Data / Hora</th>
+            <th>Usuário</th>
+            <th>Ação</th>
+            <th>C.I</th>
+            <th>Detalhes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="ci-date">09/05 08:14</td><td>Paulo Mendes</td><td><span class="status-badge unread">ENVIO</span></td><td><span class="ci-num">CI-2025-047</span></td><td style="color:var(--text-muted);font-size:12px">Enviado para Manutenção</td></tr>
+          <tr><td class="ci-date">08/05 14:32</td><td>João Silva</td><td><span class="status-badge read">LEITURA</span></td><td><span class="ci-num">CI-2025-043</span></td><td style="color:var(--text-muted);font-size:12px">IP: 10.0.1.42</td></tr>
+          <tr><td class="ci-date">08/05 09:20</td><td>Ana Carvalho</td><td><span class="status-badge pending">ENVIO</span></td><td><span class="ci-num">CI-2025-046</span></td><td style="color:var(--text-muted);font-size:12px">Enviado com 1 anexo</td></tr>
+          <tr><td class="ci-date">07/05 00:00</td><td>Sistema</td><td><span class="status-badge archived">ARQUIVO</span></td><td><span class="ci-num">CI-2025-040</span></td><td style="color:var(--text-muted);font-size:12px">Arquivado automaticamente</td></tr>
+          <tr><td class="ci-date">07/05 09:05</td><td>Carla Brito</td><td><span class="status-badge unread">ENVIO</span></td><td><span class="ci-num">CI-2025-045</span></td><td style="color:var(--text-muted);font-size:12px">12 destinatários</td></tr>
+        </tbody>
+      </table>
+      <div class="table-footer">
+        <div class="table-info">Exibindo <strong>1–5</strong> de <strong>312</strong> registros</div>
+        <div class="pagination">
+          <button class="page-btn active">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">…</button>
+          <button class="page-btn"><i class="ti ti-chevron-right"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL: VISUALIZAR C.I -->
+<div class="modal-overlay" id="modal-ci">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-ci-num" style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-file-text" style="color:var(--usga-mid)"></i>
+        CI-2025-XXX
+      </h2>
+      <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-ci-header">
+        <div class="modal-field"><label>Remetente</label><p id="modal-from">—</p></div>
+        <div class="modal-field"><label>Destinatário</label><p id="modal-to">—</p></div>
+        <div class="modal-field"><label>Data</label><p id="modal-date">—</p></div>
+        <div class="modal-field"><label>Prioridade</label><p id="modal-prio">—</p></div>
+      </div>
+      <div class="modal-field" style="margin-bottom:12px">
+        <label>Assunto</label>
+        <p id="modal-subject" style="font-size:16px;font-weight:600;margin-top:4px"></p>
+      </div>
+      <div class="ci-body-text" id="modal-body-text"></div>
+      <div class="read-indicator" id="modal-read-indicator">
+        <i class="ti ti-eye-check"></i>
+        Você está visualizando esta C.I agora — confirmação de leitura será registrada no sistema.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost"><i class="ti ti-download"></i> Baixar PDF</button>
+      <button class="btn-ghost"><i class="ti ti-archive"></i> Arquivar</button>
+      <button class="btn btn-primary"><i class="ti ti-check"></i> Confirmar Leitura</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showPage(name) {
+  ['dashboard','nova','auditoria'].forEach(p => {
+    var el = document.getElementById('page-'+p);
+    if(el) el.style.display = (p === name) ? '' : 'none';
+  });
+  var titles = {
+    dashboard: 'Dashboard <span>/ Visão Geral</span>',
+    nova: 'Nova C.I <span>/ Redigir Comunicação</span>',
+    auditoria: 'Auditoria <span>/ Histórico do Sistema</span>',
+    cis: 'Minhas C.I <span>/ Caixa de Entrada</span>',
+    docs: 'Documentos <span>/ Arquivos</span>'
+  };
+  document.getElementById('page-title').innerHTML = titles[name] || 'C.I Digital';
+  document.querySelectorAll('.nav-item').forEach(function(el) {
+    el.classList.remove('active');
+  });
+}
+
+function showModal() {
+  document.getElementById('modal-ci').classList.add('open');
+  document.getElementById('modal-ci-num').innerHTML = '<i class="ti ti-file-text" style="color:var(--usga-mid)"></i> Nova C.I';
+  document.getElementById('modal-from').textContent = 'João Silva (você)';
+  document.getElementById('modal-to').textContent = 'Manutenção';
+  document.getElementById('modal-date').textContent = '12/05/2025';
+  document.getElementById('modal-prio').textContent = 'Média';
+  document.getElementById('modal-subject').textContent = 'Nova Comunicação';
+  document.getElementById('modal-body-text').textContent = 'Preencha os campos no formulário.';
+}
+
+function openCI(num, subject, from, to, prio, date, body, fromName) {
+  document.getElementById('modal-ci').classList.add('open');
+  document.getElementById('modal-ci-num').innerHTML = '<i class="ti ti-file-text" style="color:var(--usga-mid)"></i> ' + num;
+  document.getElementById('modal-from').textContent = (fromName || from) + ' · Depto. ' + from;
+  document.getElementById('modal-to').textContent = to;
+  document.getElementById('modal-date').textContent = date;
+  document.getElementById('modal-prio').innerHTML = prio === 'Alta' ? '<span style="color:var(--danger);font-weight:600">⬤ Alta / Urgente</span>' : prio === 'Média' ? '<span style="color:var(--warning);font-weight:600">⬤ Média</span>' : '<span style="color:var(--usga-light);font-weight:600">⬤ Baixa</span>';
+  document.getElementById('modal-subject').textContent = subject;
+  document.getElementById('modal-body-text').textContent = body;
+}
+
+function closeModal() {
+  document.getElementById('modal-ci').classList.remove('open');
+}
+
+document.getElementById('modal-ci').addEventListener('click', function(e) {
+  if(e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
