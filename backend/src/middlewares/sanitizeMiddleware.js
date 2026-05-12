@@ -1,9 +1,16 @@
-//lista de padroes de SQL injection
-// São comandos perigosos que alguém pode tentar mandar no lugar de um nome normal
+// Lista de padrões de SQL Injection
 const SQL_PATTERNS = [
   /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\b)/gi,
   /(--|\/\*|\*\/)/gi,
   /('|('')|(%27))/gi,
+];
+
+// Lista de padrões de XSS — estava faltando essa parte!
+const XSS_PATTERNS = [
+  /<script[\s\S]*?>[\s\S]*?<\/script>/gi,
+  /javascript\s*:/gi,
+  /on\w+\s*=/gi,
+  /<\s*(iframe|object|embed)/gi,
 ];
 
 // Vasculha todos os campos recebidos em busca de ataques
@@ -30,16 +37,16 @@ const scanForAttacks = (obj, prefix = '') => {
   return null;
 };
 
-//middlewere pricinpal - verifica tudo que chega antes de processae
-export const sanitizeInus = (req, res, next) => {
-    const attack =
+// Middleware principal — verifica tudo que chega antes de processar
+export const sanitizeInputs = (req, res, next) => {
+  const attack =
     scanForAttacks(req.body, 'body') ||
     scanForAttacks(req.query, 'query');
 
-    if(attack) {
-        //avisa o admin mo console do servidor
-         console.warn(
-        ' ATAQUE DETECTADO: tipo=${attack.tipo} campo=${attack.campo} ip=${req.ip}'
+  if (attack) {
+    // Usando template literal correto com backtick
+    console.warn(
+      `🚨 ATAQUE DETECTADO: tipo=${attack.tipo} campo=${attack.campo} ip=${req.ip}`
     );
     return res.status(400).json({
       sucesso: false,
@@ -47,12 +54,12 @@ export const sanitizeInus = (req, res, next) => {
       erro: 'Entrada inválida detectada',
       codigo: 'ENTRADA_INVALIDA'
     });
-    }
+  }
 
-    next();
+  next();
 };
 
-//garante que so chegue JSON nas rotas que esperam JSON
+// Garante que só chegue JSON nas rotas que esperam JSON
 export const validateContentType = (req, res, next) => {
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
     const contentType = req.headers['content-type'] || '';
