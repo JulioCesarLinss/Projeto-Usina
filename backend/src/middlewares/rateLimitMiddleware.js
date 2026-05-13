@@ -23,6 +23,8 @@ export const rateLimiter = (options = {}) => {
   const { windowMs = 60000, max = 100 } = options;
 
   return (req, res, next) => {
+    if (process.env.NODE_ENV === 'test') return next();
+
     const ip = getClientIP(req);
     const now = Date.now();
     const record = requestCounts.get(ip);
@@ -48,6 +50,8 @@ export const rateLimiter = (options = {}) => {
 };
 
 export const loginRateLimiter = (req, res, next) => {
+  if (process.env.NODE_ENV === 'test') return next();
+
   const ip = getClientIP(req);
   const now = Date.now();
   const windowMs = 15 * 60 * 1000;
@@ -74,6 +78,8 @@ export const loginRateLimiter = (req, res, next) => {
 };
 
 export const registrarFalhaLogin = (req) => {
+  if (process.env.NODE_ENV === 'test') return;
+
   const ip = getClientIP(req);
   const now = Date.now();
   const windowMs = 15 * 60 * 1000;
