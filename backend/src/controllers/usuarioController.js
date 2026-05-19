@@ -393,6 +393,7 @@ export const deletarUsuario = async (req, res, next) => {
     try {
       resultado = await usuarioModel.deletarUsuario(id);
     } catch (err) {
+       console.log(err);
       throw new DatabaseError(
         'Erro ao deletar usuário',
         'ERRO_DELETAR_USUARIO'
