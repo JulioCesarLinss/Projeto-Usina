@@ -61,7 +61,8 @@ export const verificarToken = (req, res, next) => {
     req.usuario = {
       id: decoded.id,
       email: decoded.email,
-      cargo_id: decoded.cargo_id
+      cargo_id: decoded.cargo_id,
+      departamento_id: decoded.departamento_id
     };
 
     // Guardado para uso no logout

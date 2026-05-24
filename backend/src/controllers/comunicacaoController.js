@@ -184,7 +184,6 @@ export const arquivarComunicacao = async (req, res, next) =>{
         try{
             await comunicacaoModel.arquivarCI(id);
         }catch(err){
-            console.error(err);
             throw new DatabaseError(
                 'Erro ao arquivar CI',
                 'ERRO_ARQUIVAR_CI'

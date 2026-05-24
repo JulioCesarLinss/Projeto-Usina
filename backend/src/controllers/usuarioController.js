@@ -128,7 +128,8 @@ export const login = async (req, res, next) => {
       {
         id: usuario.id,
         cargo_id: usuario.cargo_id,
-        email: usuario.email
+        email: usuario.email,
+        departamento_id: usuario.departamento_id
       },
       process.env.JWT_SECRET,
       {
@@ -393,7 +394,6 @@ export const deletarUsuario = async (req, res, next) => {
     try {
       resultado = await usuarioModel.deletarUsuario(id);
     } catch (err) {
-       console.log(err);
       throw new DatabaseError(
         'Erro ao deletar usuário',
         'ERRO_DELETAR_USUARIO'
