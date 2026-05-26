@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import pool from './src/config/db.js';
 import usuarioRoutes from './src/routes/usuarioRoutes.js';
+import uploadRoutes from './src/routes/uploadRoutes.js';
 import { handleError, asyncHandler } from './src/middlewares/errorMiddleware.js';
 
 dotenv.config();
@@ -21,6 +22,10 @@ app.options('*', cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Servir arquivos estáticos de uploads
+app.use('/uploads', express.static('storage/uploads'));
+
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({ 
@@ -62,6 +67,8 @@ app.get('/api/health/completo', asyncHandler(async (req, res) => {
 
 
 app.use('/api/usuarios', usuarioRoutes);
+
+app.use('/api/uploads', uploadRoutes);
 
 
 app.use((req, res) => {

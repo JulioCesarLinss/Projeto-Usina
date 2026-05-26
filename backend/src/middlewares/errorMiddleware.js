@@ -1,5 +1,5 @@
 import { AppError, ValidationError, DatabaseError } from '../utils/appError.js';
-
+import multer from 'multer';
 
 export const handleError = (err, req, res, next) => {
   console.error('ERRO:', {
@@ -93,6 +93,67 @@ export const handleError = (err, req, res, next) => {
       codigo: 'TOKEN_EXPIRADO'
     });
   }
+ if (err instanceof multer.MulterError) {
+
+
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      sucesso: false,
+      tipo: 'upload',
+      erro: 'Arquivo muito grande. Limite máximo de 15MB',
+      codigo: 'ARQUIVO_MUITO_GRANDE'
+    });
+  }
+
+  if (err.code === 'LIMIT_FILE_COUNT') {
+    return res.status(400).json({
+      sucesso: false,
+      tipo: 'upload',
+      erro: 'Apenas um arquivo é permitido por upload',
+      codigo: 'LIMITE_ARQUIVOS_EXCEDIDO'
+    });
+  }
+
+  return res.status(400).json({
+    sucesso: false,
+    tipo: 'upload',
+    erro: 'Erro ao realizar upload',
+    codigo: 'ERRO_UPLOAD'
+  });
+}
+
+
+if (
+  err.message ===
+  'Apenas arquivos PDF e Excel são permitidos'
+) {
+  return res.status(400).json({
+    sucesso: false,
+    tipo: 'upload',
+    erro: err.message,
+    codigo: 'TIPO_ARQUIVO_INVALIDO'
+  });
+}
+
+
+if (err.message === 'Nome do arquivo muito grande') {
+  return res.status(400).json({
+    sucesso: false,
+    tipo: 'upload',
+    erro: err.message,
+    codigo: 'NOME_ARQUIVO_INVALIDO'
+  });
+}
+
+// arquivo vazio
+if (err.message === 'Arquivo vazio') {
+  return res.status(400).json({
+    sucesso: false,
+    tipo: 'upload',
+    erro: err.message,
+    codigo: 'ARQUIVO_VAZIO'
+  });
+}
 
   console.error(' ERRO NÃO TRATADO:', err);
 
