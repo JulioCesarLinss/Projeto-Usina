@@ -1,12 +1,41 @@
+import multer from 'multer';
 import { AppError, ValidationError, DatabaseError } from '../utils/appError.js';
-
 
 export const handleError = (err, req, res, next) => {
   console.error('ERRO:', {
-    tipo: err.tipo || 'desconhecido',
+    tipo: err.tipo || err.code || 'desconhecido',
     mensagem: err.message,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
+
+  if (err instanceof multer.MulterError) {
+    let mensagem = 'Erro ao realizar upload';
+    let codigo = 'ERRO_UPLOAD';
+    let status = 400;
+
+    switch (err.code) {
+      case 'LIMIT_FILE_SIZE':
+        mensagem = 'Tamanho de arquivo maior que 15MB não é permitido';
+        codigo = 'UPLOAD_TAMANHO_EXCEDIDO';
+        status = 413;
+        break;
+      case 'LIMIT_UNEXPECTED_FILE':
+      case 'LIMIT_FILE_COUNT':
+        mensagem = 'Apenas um arquivo é permitido por upload';
+        codigo = 'UPLOAD_ARQUIVO_EXCEDIDO';
+        break;
+      default:
+        mensagem = err.message || 'Erro ao realizar upload';
+        codigo = 'ERRO_UPLOAD';
+    }
+
+    return res.status(status).json({
+      sucesso: false,
+      tipo: 'upload',
+      erro: mensagem,
+      codigo: codigo
+    });
+  }
 
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
@@ -14,7 +43,7 @@ export const handleError = (err, req, res, next) => {
       tipo: err.tipo,
       erro: err.message,
       codigo: err.codigo,
-      ...(err.erros && { erros: err.erros }) 
+      ...(err.erros && { erros: err.erros })
     });
   }
 
