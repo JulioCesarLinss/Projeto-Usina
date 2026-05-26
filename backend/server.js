@@ -6,6 +6,7 @@ import usuarioRoutes from './src/routes/usuarioRoutes.js';
 import comunicacaoRoutes from './src/routes/comunicacaoRoutes.js';
 import confirmacaoRoutes from './src/routes/confirmacaoLeituraRoutes.js';
 import notificacaoRoutes from './src/routes/notificacaoRoutes.js';
+import uploadRoutes from './src/routes/uploadRoutes.js';
 import { handleError, asyncHandler } from './src/middlewares/errorMiddleware.js';
 import { securityHeaders } from './src/middlewares/securityHeadersMiddleware.js';
 import { rateLimiter } from './src/middlewares/rateLimitMiddleware.js';
@@ -95,6 +96,7 @@ app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/comunicacoes', comunicacaoRoutes);
 app.use('/api/comunicacoes', confirmacaoRoutes);
 app.use('/api/notificacoes', notificacaoRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // ==================== ROTA NÃO ENCONTRADA ====================
 app.use((req, res) => {
