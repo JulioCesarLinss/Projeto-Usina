@@ -1,4 +1,5 @@
 import * as comunicacaoModel from '../models/comunicacaoModel.js';
+import * as notificacaoModel from '../models/notificacaoModel.js';
 import { ValidationError, NotFoundError, DatabaseError } from '../utils/appError.js';
 
 export const criarCI = async (req, res, next) => {
@@ -23,6 +24,13 @@ export const criarCI = async (req, res, next) => {
     } catch (err) {
       throw new DatabaseError('Erro ao criar comunicação', 'ERRO_CRIAR_COMUNICACAO');
     }
+
+    // cria notificação automaticamente após criar a CI
+    await notificacaoModel.criarNotificacao(
+      `Nova C.I recebida: ${titulo}`,
+      usuario_id,//mudar para departamento_id após implementação do destinatario
+      resultado.insertId
+    );
 
     res.status(201).json({
       sucesso: true,
