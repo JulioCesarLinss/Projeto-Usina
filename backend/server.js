@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import pool from './src/config/db.js';
 import usuarioRoutes from './src/routes/usuarioRoutes.js';
+import departamentoRoutes from './src/routes/departamentoRoutes.js';
 import comunicacaoRoutes from './src/routes/comunicacaoRoutes.js';
 import confirmacaoRoutes from './src/routes/confirmacaoLeituraRoutes.js';
 import notificacaoRoutes from './src/routes/notificacaoRoutes.js';
@@ -99,6 +100,7 @@ app.use('/api/comunicacoes', confirmacaoRoutes);
 app.use('/api/notificacoes', notificacaoRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/destinatarios', destinatarioRoutes);
+app.use('/api/departamentos', departamentoRoutes);
 
 // ==================== ROTA NÃO ENCONTRADA ====================
 app.use((req, res) => {

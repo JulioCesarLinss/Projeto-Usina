@@ -12,10 +12,9 @@ export const buscarDepartamentoporID = async (id) => {
   return results[0];
 };
 
-export const listarDepartamentos = async (usuario_id, pagina = 1, limite = 20) => {
-  const offset = (pagina - 1) * limite;
-  const sql = 'SELECT * FROM departamento WHERE usuario_id = ? LIMIT ? OFFSET ?';
-  const [results] = await pool.query(sql, [usuario_id, limite, offset]);
+export const listarDepartamentos = async () => {
+  const sql = 'SELECT id, nome, descricao FROM departamento';
+  const [results] = await pool.query(sql);
   return results;
 };
 
