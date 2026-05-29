@@ -1,10 +1,12 @@
 import * as comunicacaoModel from '../models/comunicacaoModel.js';
 import * as notificacaoModel from '../models/notificacaoModel.js';
+import * as destinatarioModel from '../models/destinatarioModel.js';
 import { ValidationError, NotFoundError, DatabaseError } from '../utils/appError.js';
 
 export const criarCI = async (req, res, next) => {
   try {
     const { titulo, estado, descricao, departamento_id } = req.body;
+    const { titulo, estado, descricao, departamento_id, destinatarios } = req.body;
     const usuario_id = req.usuario.id;
     const data_hora = new Date();
 
@@ -26,11 +28,16 @@ export const criarCI = async (req, res, next) => {
     }
 
     // cria notificação automaticamente após criar a CI
-    await notificacaoModel.criarNotificacao(
-      `Nova C.I recebida: ${titulo}`,
-      usuario_id,//mudar para departamento_id após implementação do destinatario
-      resultado.insertId
-    );
+    if (destinatarios && destinatarios.length > 0) {
+    for (const dest of destinatarios) {
+        await destinatarioModel.adicionarDestinatario(resultado.insertId, dest.usuario_id, dest.departamento_id);
+        await notificacaoModel.criarNotificacao(
+        `Nova C.I recebida: ${titulo}`,
+        dest.usuario_id,
+        resultado.insertId
+        );
+        }
+    }
 
     res.status(201).json({
       sucesso: true,
