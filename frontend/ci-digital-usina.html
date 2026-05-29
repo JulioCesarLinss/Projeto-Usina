@@ -974,9 +974,153 @@
     .content-grid { grid-template-columns: 1fr; }
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
   }
+
+@media print {
+  body * { visibility: hidden; }
+  #print-area, #print-area * { visibility: visible; }
+  #print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white;
+    padding: 40px;
+    color: black;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ── LOGIN ── */
+#login-screen {
+  position: fixed; inset: 0;
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.login-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 40px 36px;
+  width: 100%; max-width: 400px;
+  border: 1px solid var(--border);
+}
+.login-brand {
+  text-align: center; margin-bottom: 28px;
+}
+.login-brand svg { width: 140px; height: 38px; margin: 0 auto 8px; display: block; }
+.login-brand h1 { font-size: 20px; font-weight: 600; color: var(--usga-dark); }
+.login-brand p  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.login-form .form-group { margin-bottom: 16px; }
+.login-form label { display: block; font-size: 12px; font-weight: 600; color: var(--text-mid); margin-bottom: 5px; }
+.login-form input {
+  width: 100%; padding: 9px 12px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 14px; font-family: var(--font-body);
+  background: var(--surface); color: var(--text-primary);
+  transition: border-color .15s;
+}
+.login-form input:focus { outline: none; border-color: var(--usga-mid); }
+.login-btn {
+  width: 100%; padding: 10px;
+  background: var(--usga-dark); color: white;
+  border: none; border-radius: var(--radius);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  font-family: var(--font-body);
+  transition: background .15s;
+  margin-top: 4px;
+}
+.login-btn:hover { background: var(--usga-mid); }
+.login-btn:disabled { opacity: .6; cursor: not-allowed; }
+.login-error {
+  background: #FEE2E2; border: 1px solid #FCA5A5;
+  color: #B91C1C; border-radius: var(--radius);
+  padding: 9px 12px; font-size: 13px;
+  margin-bottom: 14px; display: none;
+}
+
+/* ── LOADING SPINNER ── */
+.spin {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: white; border-radius: 50%;
+  animation: spin .6s linear infinite;
+  vertical-align: middle; margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── SKELETON / LOADING STATE ── */
+.skeleton { background: linear-gradient(90deg, var(--border) 25%, var(--usga-xpale) 50%, var(--border) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 4px; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ── TOAST ── */
+#toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9998; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--text-primary); color: white;
+  padding: 11px 16px; border-radius: var(--radius);
+  font-size: 13px; box-shadow: var(--shadow-md);
+  display: flex; align-items: center; gap: 8px;
+  animation: slideIn .25s ease;
+  max-width: 320px;
+}
+.toast.success { background: var(--usga-dark); }
+.toast.error   { background: var(--danger); }
+.toast.info    { background: var(--info); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── EMPTY STATE ── */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+.empty-state i { font-size: 36px; margin-bottom: 10px; opacity: .4; }
+.empty-state p { font-size: 14px; }
+
+/* ── BADGE NO BADGE ── */
+.notif-count-badge {
+  position: absolute; top: 2px; right: 2px;
+  background: var(--danger); color: white;
+  font-size: 10px; font-weight: 700;
+  border-radius: 99px; padding: 1px 5px; line-height: 1.4;
+}
+
 </style>
 </head>
 <body>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-brand">
+      <svg viewBox="0 0 120 34" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="12,2 22,2 30,10 22,18 12,18 4,10" fill="#43931F"/>
+        <polygon points="32,2 42,2 50,10 42,18 32,18 24,10" fill="#7AB260"/>
+        <text x="56" y="14" font-family="'DM Serif Display',serif" font-size="15" fill="#2D6A10" font-weight="700">USGA</text>
+        <text x="56" y="25" font-family="'DM Sans',sans-serif" font-size="7.5" fill="#5A8A40" letter-spacing="0.5">USINA &amp; GRUPO</text>
+      </svg>
+      <h1>C.I Digital</h1>
+      <p>Comunicação Interna · Usina Trapiche</p>
+    </div>
+    <div id="login-error" class="login-error"></div>
+    <div class="login-form">
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="login-btn" id="login-btn" onclick="fazerLogin()">
+        Entrar no sistema
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="app" style="display:none; width:100%; min-height:100vh;">
 
 <div class="top-accent"></div>
 
@@ -1002,12 +1146,12 @@
   </div>
 
   <div class="sidebar-user">
-    <div class="user-avatar">JS</div>
+    <div class="user-avatar" id="sidebar-avatar">--</div>
     <div class="user-info">
-      <div class="user-name">João Silva</div>
-      <div class="user-dept">Depto. Industrial</div>
+      <div class="user-name" id="sidebar-nome">Carregando...</div>
+      <div class="user-dept" id="sidebar-depto">—</div>
     </div>
-    <i class="ti ti-settings" style="color:rgba(255,255,255,0.3);font-size:16px;cursor:pointer"></i>
+    <i class="ti ti-logout" style="color:rgba(255,255,255,0.3);font-size:16px;cursor:pointer" onclick="fazerLogout()" title="Sair"></i>
   </div>
 
   <div class="nav-section">
@@ -1078,9 +1222,10 @@
         <i class="ti ti-search"></i>
         <input type="text" placeholder="Buscar C.I, setor, data...">
       </div>
-      <div class="icon-btn" title="Notificações">
+      <div class="icon-btn" title="Notificações" onclick="showPage('dashboard')" style="position:relative">
         <i class="ti ti-bell"></i>
-        <span class="notif-dot"></span>
+        <span class="notif-dot" id="notif-dot" style="display:none"></span>
+        <span class="notif-count-badge" id="notif-badge" style="display:none">0</span>
       </div>
       <div class="icon-btn" title="Calendário">
         <i class="ti ti-calendar"></i>
@@ -1095,50 +1240,38 @@
   <!-- PAGE: DASHBOARD -->
   <div class="page" id="page-dashboard">
 
-    <!-- STATS -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-header">
           <div class="stat-label">C.I Enviadas</div>
           <div class="stat-icon green"><i class="ti ti-send"></i></div>
         </div>
-        <div class="stat-value">47</div>
-        <div class="stat-foot">
-          <span class="stat-delta up"><i class="ti ti-trending-up" style="font-size:13px"></i> +12%</span>
-          vs mês anterior
-        </div>
+        <div class="stat-value" id="stat-enviadas">—</div>
+        <div class="stat-foot"><span class="stat-delta up"><i class="ti ti-trending-up" style="font-size:13px"></i></span> Total enviadas</div>
       </div>
       <div class="stat-card">
         <div class="stat-header">
           <div class="stat-label">Pendentes de Leitura</div>
           <div class="stat-icon amber"><i class="ti ti-clock"></i></div>
         </div>
-        <div class="stat-value">8</div>
-        <div class="stat-foot">
-          <span class="stat-delta down"><i class="ti ti-trending-up" style="font-size:13px"></i> +3</span>
-          desde ontem
-        </div>
+        <div class="stat-value" id="stat-pendentes">—</div>
+        <div class="stat-foot"><span class="stat-delta down"></span> Não lidas</div>
       </div>
       <div class="stat-card">
         <div class="stat-header">
-          <div class="stat-label">Em Atraso</div>
-          <div class="stat-icon red"><i class="ti ti-alert-triangle"></i></div>
+          <div class="stat-label">C.I Recebidas</div>
+          <div class="stat-icon red"><i class="ti ti-file-download"></i></div>
         </div>
-        <div class="stat-value">2</div>
-        <div class="stat-foot">
-          <span class="stat-delta down">Prazo vencido</span>
-        </div>
+        <div class="stat-value" id="stat-recebidas">—</div>
+        <div class="stat-foot"><span class="stat-delta">Total recebidas</span></div>
       </div>
       <div class="stat-card">
         <div class="stat-header">
-          <div class="stat-label">Arquivadas (mês)</div>
-          <div class="stat-icon blue"><i class="ti ti-archive"></i></div>
+          <div class="stat-label">Notificações</div>
+          <div class="stat-icon blue"><i class="ti ti-bell"></i></div>
         </div>
-        <div class="stat-value">124</div>
-        <div class="stat-foot">
-          <span class="stat-delta up"><i class="ti ti-trending-up" style="font-size:13px"></i> +8%</span>
-          vs mês anterior
-        </div>
+        <div class="stat-value" id="stat-notif">—</div>
+        <div class="stat-foot"><span class="stat-delta up"></span> Total</div>
       </div>
     </div>
 
@@ -1148,17 +1281,14 @@
       <!-- LEFT: C.I TABLE -->
       <div class="card">
         <div class="tab-bar">
-          <div class="tab active">Recebidas <span class="tab-count">12</span></div>
-          <div class="tab">Enviadas <span class="tab-count">47</span></div>
-          <div class="tab">Pendentes <span class="tab-count">8</span></div>
-          <div class="tab">Arquivadas</div>
+          <div class="tab active" onclick="mudarAbaCI('recebidas', this)">Recebidas <span class="tab-count" id="tab-count-recebidas">—</span></div>
+          <div class="tab" onclick="mudarAbaCI('enviadas', this)">Enviadas <span class="tab-count" id="tab-count-enviadas">—</span></div>
         </div>
         <div class="filter-bar">
           <i class="ti ti-filter" style="color:var(--text-faint);font-size:16px"></i>
-          <select><option>Todos os departamentos</option><option>Industrial</option><option>Financeiro</option><option>RH</option><option>Qualidade</option></select>
-          <select><option>Qualquer prioridade</option><option>Alta</option><option>Média</option><option>Baixa</option></select>
+          <select id="filtro-depto"><option value="">Todos os departamentos</option></select>
           <div class="filter-sep"></div>
-          <select style="max-width:130px"><option>Mais recente</option><option>Mais antigo</option><option>Por setor</option></select>
+          <select style="max-width:130px" id="filtro-ordem"><option value="recente">Mais recente</option><option value="antigo">Mais antigo</option></select>
         </div>
 
         <table class="ci-table">
@@ -1173,75 +1303,14 @@
               <th style="width:30px"></th>
             </tr>
           </thead>
-          <tbody>
-            <tr onclick="openCI('CI-2025-047', 'Procedimento de Manutenção — Caldeira B3', 'Industrial', 'Manutenção', 'Alta', '09/05/2025', 'Informamos a necessidade de parada programada para manutenção preventiva da caldeira B3. O procedimento seguirá o protocolo NR-13 e está agendado para 15/05/2025 entre 06h00 e 10h00. Solicitamos a disponibilização da equipe de segurança durante todo o período.', 'Paulo Mendes')">
-              <td><span class="priority-dot high"></span></td>
-              <td><span class="ci-num">CI-2025-047</span></td>
-              <td class="ci-subject">Procedimento de Manutenção — Caldeira B3<small>Paulo Mendes · Depto. Industrial</small></td>
-              <td><span class="dept-tag"><i class="ti ti-tool" style="font-size:11px"></i> Manutenção</span></td>
-              <td><span class="status-badge unread">Não lido</span></td>
-              <td class="ci-date">09/05/2025</td>
-              <td><i class="ti ti-paperclip attach-icon"></i></td>
-            </tr>
-            <tr onclick="openCI('CI-2025-046', 'Relatório de Qualidade — Lote 820', 'Qualidade', 'Industrial', 'Média', '08/05/2025', 'Segue em anexo o relatório de análise do lote 820 referente à produção do mês de abril. Foram identificados desvios nos parâmetros de sacarose que requerem avaliação da equipe industrial. Favor retornar com posicionamento em até 48 horas.', 'Ana Carvalho')">
-              <td><span class="priority-dot medium"></span></td>
-              <td><span class="ci-num">CI-2025-046</span></td>
-              <td class="ci-subject">Relatório de Qualidade — Lote 820<small>Ana Carvalho · Qualidade</small></td>
-              <td><span class="dept-tag"><i class="ti ti-flask" style="font-size:11px"></i> Industrial</span></td>
-              <td><span class="status-badge pending">Pendente</span></td>
-              <td class="ci-date">08/05/2025</td>
-              <td><i class="ti ti-paperclip attach-icon"></i></td>
-            </tr>
-            <tr onclick="openCI('CI-2025-045', 'Solicitação de Férias Coletivas', 'RH', 'Todos os Dptos', 'Baixa', '07/05/2025', 'Comunicamos que a diretoria deliberou sobre o período de férias coletivas que ocorrerá de 20/12/2025 a 03/01/2026. Solicitamos que todos os gestores realizem o planejamento de escala para garantir a continuidade das operações críticas.', 'Carla Brito')">
-              <td><span class="priority-dot low"></span></td>
-              <td><span class="ci-num">CI-2025-045</span></td>
-              <td class="ci-subject">Solicitação de Férias Coletivas<small>Carla Brito · RH</small></td>
-              <td><span class="dept-tag"><i class="ti ti-building" style="font-size:11px"></i> Todos os Dptos</span></td>
-              <td><span class="status-badge read">Lido</span></td>
-              <td class="ci-date">07/05/2025</td>
-              <td></td>
-            </tr>
-            <tr onclick="openCI('CI-2025-044', 'Orçamento — Substituição Esteiras', 'Financeiro', 'Industrial', 'Alta', '06/05/2025', 'Conforme solicitado, encaminhamos os três orçamentos obtidos para substituição das esteiras transportadoras do setor de moagem. A proposta com melhor custo-benefício é do fornecedor Mecatrans Ltda no valor de R$ 87.500,00. Aguardamos aprovação para emissão de PO.', 'Ricardo Leal')">
-              <td><span class="priority-dot high"></span></td>
-              <td><span class="ci-num">CI-2025-044</span></td>
-              <td class="ci-subject">Orçamento — Substituição Esteiras<small>Ricardo Leal · Financeiro</small></td>
-              <td><span class="dept-tag"><i class="ti ti-tool" style="font-size:11px"></i> Industrial</span></td>
-              <td><span class="status-badge unread">Não lido</span></td>
-              <td class="ci-date">06/05/2025</td>
-              <td><i class="ti ti-paperclip attach-icon"></i></td>
-            </tr>
-            <tr onclick="openCI('CI-2025-043', 'Treinamento NR-10 — Equipe Elétrica', 'Segurança', 'Manutenção', 'Média', '05/05/2025', 'Informamos que o treinamento de reciclagem NR-10 será realizado nos dias 19 e 20 de maio de 2025 nas instalações do SENAI. A participação é obrigatória para todos os eletricistas e técnicos do setor de manutenção elétrica. As inscrições devem ser confirmadas até 12/05.', 'Fernanda Costa')">
-              <td><span class="priority-dot medium"></span></td>
-              <td><span class="ci-num">CI-2025-043</span></td>
-              <td class="ci-subject">Treinamento NR-10 — Equipe Elétrica<small>Fernanda Costa · Segurança</small></td>
-              <td><span class="dept-tag"><i class="ti ti-shield" style="font-size:11px"></i> Manutenção</span></td>
-              <td><span class="status-badge read">Lido</span></td>
-              <td class="ci-date">05/05/2025</td>
-              <td></td>
-            </tr>
-            <tr onclick="openCI('CI-2025-042', 'Atualização Política de Segurança da Informação', 'TI', 'Todos os Dptos', 'Média', '02/05/2025', 'Comunicamos a atualização da Política de Segurança da Informação conforme a resolução da diretoria. As principais mudanças incluem autenticação em dois fatores obrigatória e classificação de documentos confidenciais. O documento completo está disponível no portal interno.', 'Marcos Oliveira')">
-              <td><span class="priority-dot medium"></span></td>
-              <td><span class="ci-num">CI-2025-042</span></td>
-              <td class="ci-subject">Atualização Política de Segurança<small>Marcos Oliveira · TI</small></td>
-              <td><span class="dept-tag"><i class="ti ti-building" style="font-size:11px"></i> Todos os Dptos</span></td>
-              <td><span class="status-badge archived">Arquivado</span></td>
-              <td class="ci-date">02/05/2025</td>
-              <td><i class="ti ti-paperclip attach-icon"></i></td>
-            </tr>
+          <tbody id="ci-tbody">
+            <tr><td colspan="7" class="empty-state" style="padding:32px"><i class="ti ti-loader spin" style="display:inline-block"></i> Carregando...</td></tr>
           </tbody>
         </table>
 
         <div class="table-footer">
-          <div class="table-info">Exibindo <strong>1–6</strong> de <strong>47</strong> comunicações</div>
-          <div class="pagination">
-            <button class="page-btn"><i class="ti ti-chevron-left"></i></button>
-            <button class="page-btn active">1</button>
-            <button class="page-btn">2</button>
-            <button class="page-btn">3</button>
-            <button class="page-btn">…</button>
-            <button class="page-btn">8</button>
-            <button class="page-btn"><i class="ti ti-chevron-right"></i></button>
-          </div>
+          <div class="table-info" id="ci-table-info">Carregando...</div>
+          <div class="pagination" id="ci-pagination"></div>
         </div>
       </div>
 
@@ -1252,47 +1321,10 @@
         <div class="card">
           <div class="card-header">
             <div class="card-title"><i class="ti ti-bell"></i> Notificações</div>
-            <button class="btn-ghost"><i class="ti ti-check"></i> Marcar todas</button>
+            <button class="btn-ghost" onclick="marcarTodasLidas()"><i class="ti ti-check"></i> Marcar todas</button>
           </div>
-          <div class="notif-list">
-            <div class="notif-item unread">
-              <div class="notif-icon alert"><i class="ti ti-alert-circle"></i></div>
-              <div class="notif-body">
-                <div class="notif-text"><strong>CI-2025-047</strong> aguarda sua leitura há 2 dias — prazo a vencer</div>
-                <div class="notif-time">Há 10 minutos</div>
-              </div>
-              <div class="notif-unread-dot"></div>
-            </div>
-            <div class="notif-item unread">
-              <div class="notif-icon recv"><i class="ti ti-file-download"></i></div>
-              <div class="notif-body">
-                <div class="notif-text"><strong>Ana Carvalho</strong> enviou nova C.I para seu departamento</div>
-                <div class="notif-time">Há 1 hora</div>
-              </div>
-              <div class="notif-unread-dot"></div>
-            </div>
-            <div class="notif-item unread">
-              <div class="notif-icon send"><i class="ti ti-circle-check"></i></div>
-              <div class="notif-body">
-                <div class="notif-text"><strong>CI-2025-040</strong> foi lida por todos os destinatários</div>
-                <div class="notif-time">Há 3 horas</div>
-              </div>
-              <div class="notif-unread-dot"></div>
-            </div>
-            <div class="notif-item">
-              <div class="notif-icon recv"><i class="ti ti-file-text"></i></div>
-              <div class="notif-body">
-                <div class="notif-text"><strong>Ricardo Leal</strong> respondeu CI-2025-038</div>
-                <div class="notif-time">Ontem, 16:42</div>
-              </div>
-            </div>
-            <div class="notif-item">
-              <div class="notif-icon alert"><i class="ti ti-clock"></i></div>
-              <div class="notif-body">
-                <div class="notif-text">Lembrete: <strong>CI-2025-044</strong> aguarda aprovação financeira</div>
-                <div class="notif-time">Ontem, 09:00</div>
-              </div>
-            </div>
+          <div class="notif-list" id="notif-list">
+            <div class="notif-item"><div class="notif-body"><div class="notif-text" style="color:var(--text-muted)"><i class="ti ti-loader spin"></i> Carregando...</div></div></div>
           </div>
         </div>
 
@@ -1403,74 +1435,48 @@
         <div class="form-row">
           <div class="form-group">
             <label>Número da C.I</label>
-            <input type="text" value="CI-2025-048" readonly style="background:var(--usga-xpale);color:var(--usga-dark);font-weight:600">
+            <input type="text" id="ci-numero" readonly style="background:var(--usga-xpale);color:var(--usga-dark);font-weight:600" placeholder="Gerado automaticamente">
           </div>
           <div class="form-group">
             <label>Data</label>
-            <input type="date" value="2025-05-12">
+            <input type="date" id="ci-data">
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Departamento Remetente</label>
-            <select>
-              <option selected>Industrial</option>
-              <option>Financeiro</option>
-              <option>RH & Pessoal</option>
-              <option>Qualidade</option>
-              <option>Segurança</option>
-              <option>TI</option>
-              <option>Manutenção</option>
+            <label>Departamento Destinatário</label>
+            <select id="ci-departamento">
+              <option value="">Selecionar...</option>
             </select>
           </div>
           <div class="form-group">
-            <label>Departamento Destinatário</label>
-            <select>
-              <option>Selecionar...</option>
-              <option>Todos os Departamentos</option>
-              <option>Industrial</option>
-              <option>Financeiro</option>
-              <option>RH & Pessoal</option>
-              <option>Qualidade</option>
-              <option>Segurança</option>
-              <option>TI</option>
-              <option>Manutenção</option>
+            <label>Estado</label>
+            <select id="ci-estado">
+              <option value="rascunho">Rascunho</option>
+              <option value="enviada">Enviada</option>
             </select>
           </div>
         </div>
         <div class="form-group full">
           <label>Assunto</label>
-          <input type="text" placeholder="Informe o assunto da comunicação...">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Prioridade</label>
-            <select>
-              <option>Baixa</option>
-              <option selected>Média</option>
-              <option>Alta — Urgente</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Prazo de Resposta</label>
-            <input type="date">
-          </div>
+          <input type="text" id="ci-titulo" placeholder="Informe o assunto da comunicação...">
         </div>
         <div class="form-group full">
           <label>Corpo da Comunicação</label>
-          <textarea placeholder="Redigir a comunicação interna..." style="min-height:120px"></textarea>
+          <textarea id="ci-descricao" placeholder="Redigir a comunicação interna..." style="min-height:120px"></textarea>
         </div>
         <div class="form-group full">
-          <label>Anexos</label>
-          <div class="upload-area">
+          <label>Anexo (opcional)</label>
+          <div class="upload-area" id="upload-area" onclick="document.getElementById('ci-arquivo').click()">
             <i class="ti ti-cloud-upload"></i>
             <p><strong>Clique para selecionar</strong> ou arraste arquivos aqui</p>
-            <p>PDF, DOCX, XLSX, PNG — máx. 20 MB por arquivo</p>
+            <p id="upload-label">PDF, DOCX, XLSX, PNG — máx. 20 MB por arquivo</p>
           </div>
+          <input type="file" id="ci-arquivo" style="display:none" accept=".pdf,.docx,.xlsx,.png,.jpg" onchange="atualizarNomeArquivo()">
         </div>
         <div class="form-actions">
-          <button class="btn-ghost"><i class="ti ti-device-floppy"></i> Salvar Rascunho</button>
-          <button class="btn btn-primary"><i class="ti ti-send"></i> Enviar C.I</button>
+          <button class="btn-ghost" onclick="salvarRascunho()"><i class="ti ti-device-floppy"></i> Salvar Rascunho</button>
+          <button class="btn btn-primary" id="btn-enviar-ci" onclick="enviarCI()"><i class="ti ti-send"></i> Enviar C.I</button>
         </div>
       </div>
     </div>
@@ -1481,7 +1487,7 @@
     <div class="card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-activity"></i> Registro de Auditoria</div>
-        <button class="btn-ghost"><i class="ti ti-download"></i> Exportar</button>
+        <button class="btn-ghost" onclick="exportAuditCSV()"><i class="ti ti-download"></i> Exportar CSV</button>
       </div>
       <div class="filter-bar">
         <select><option>Todos os usuários</option></select>
@@ -1522,6 +1528,8 @@
 
 </div>
 
+</div><!-- end #app -->
+
 <!-- MODAL: VISUALIZAR C.I -->
 <div class="modal-overlay" id="modal-ci">
   <div class="modal">
@@ -1532,7 +1540,7 @@
       </h2>
       <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body" id="print-area">
       <div class="modal-ci-header">
         <div class="modal-field"><label>Remetente</label><p id="modal-from">—</p></div>
         <div class="modal-field"><label>Destinatário</label><p id="modal-to">—</p></div>
@@ -1550,14 +1558,428 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-ghost"><i class="ti ti-download"></i> Baixar PDF</button>
-      <button class="btn-ghost"><i class="ti ti-archive"></i> Arquivar</button>
-      <button class="btn btn-primary"><i class="ti ti-check"></i> Confirmar Leitura</button>
+      <button class="btn-ghost" onclick="downloadPDF()"><i class="ti ti-download"></i> Baixar PDF</button>
+      <button class="btn-ghost" onclick="printCI()"><i class="ti ti-printer"></i> Imprimir</button>
+      <button class="btn-ghost" id="btn-arquivar" onclick="arquivarCIAtual()"><i class="ti ti-archive"></i> Arquivar</button>
+      <button class="btn btn-primary" id="btn-confirmar-leitura" onclick="confirmarLeituraAtual()"><i class="ti ti-check"></i> Confirmar Leitura</button>
     </div>
   </div>
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════
+//  CONFIGURAÇÃO DA API
+// ═══════════════════════════════════════════════════════
+const API_URL = 'http://localhost:3000/api';
+
+// ═══════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════
+const state = {
+  token: null,
+  usuario: null,
+  departamentos: [],
+  ciAtual: null,
+  abaAtiva: 'recebidas',
+  paginaAtual: 1,
+  limiteCI: 20,
+  totalCI: 0,
+};
+
+// ═══════════════════════════════════════════════════════
+//  HELPERS HTTP
+// ═══════════════════════════════════════════════════════
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (state.token) opts.headers['Authorization'] = 'Bearer ' + state.token;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API_URL + path, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.erro || data.mensagem || 'Erro na requisição');
+  return data;
+}
+
+async function apiForm(path, formData) {
+  const res = await fetch(API_URL + path, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + state.token },
+    body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.erro || data.mensagem || 'Erro no upload');
+  return data;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════
+function toast(msg, tipo = 'success') {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast ' + tipo;
+  const icon = tipo === 'success' ? 'circle-check' : tipo === 'error' ? 'alert-circle' : 'info-circle';
+  el.innerHTML = `<i class="ti ti-${icon}"></i> ${msg}`;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ═══════════════════════════════════════════════════════
+//  AUTENTICAÇÃO
+// ═══════════════════════════════════════════════════════
+async function fazerLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  errEl.style.display = 'none';
+  if (!email || !senha) { errEl.textContent = 'Preencha e-mail e senha.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Entrando...';
+  try {
+    const data = await api('POST', '/usuarios/login', { email, senha });
+    state.token = data.dados.token;
+    state.usuario = data.dados.usuario;
+    localStorage.setItem('ci_token', state.token);
+    localStorage.setItem('ci_usuario', JSON.stringify(state.usuario));
+    iniciarApp();
+  } catch (err) {
+    errEl.textContent = err.message || 'E-mail ou senha incorretos.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = 'Entrar no sistema';
+  }
+}
+
+function fazerLogout() {
+  localStorage.removeItem('ci_token');
+  localStorage.removeItem('ci_usuario');
+  state.token = null; state.usuario = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-senha').value = '';
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+async function iniciarApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = '';
+  const u = state.usuario;
+  const iniciais = u.nome.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+  document.getElementById('sidebar-avatar').textContent = iniciais;
+  document.getElementById('sidebar-nome').textContent = u.nome;
+  await carregarDepartamentos();
+  const depto = state.departamentos.find(d => d.id === u.departamento_id);
+  document.getElementById('sidebar-depto').textContent = depto ? 'Depto. ' + depto.nome : 'Depto. —';
+  document.getElementById('ci-data').value = new Date().toISOString().split('T')[0];
+  await Promise.all([carregarCIs(), carregarNotificacoes()]);
+  atualizarStats();
+}
+
+function verificarSessao() {
+  const token = localStorage.getItem('ci_token');
+  const usuarioStr = localStorage.getItem('ci_usuario');
+  if (token && usuarioStr) {
+    state.token = token;
+    state.usuario = JSON.parse(usuarioStr);
+    iniciarApp();
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  DEPARTAMENTOS
+// ═══════════════════════════════════════════════════════
+async function carregarDepartamentos() {
+  try {
+    const data = await api('GET', '/departamentos/listar');
+    state.departamentos = data.dados || [];
+    const sel = document.getElementById('ci-departamento');
+    const selFiltro = document.getElementById('filtro-depto');
+    state.departamentos.forEach(d => {
+      sel.innerHTML += `<option value="${d.id}">${d.nome}</option>`;
+      if (selFiltro) selFiltro.innerHTML += `<option value="${d.id}">${d.nome}</option>`;
+    });
+  } catch (e) { /* ignora */ }
+}
+
+// ═══════════════════════════════════════════════════════
+//  CIs — LISTAR
+// ═══════════════════════════════════════════════════════
+async function carregarCIs() {
+  const tbody = document.getElementById('ci-tbody');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)"><i class="ti ti-loader" style="animation:spin .6s linear infinite;display:inline-block;margin-right:6px"></i> Carregando...</td></tr>';
+  try {
+    const ep = state.abaAtiva === 'recebidas'
+      ? `/comunicacoes/recebidas?pagina=${state.paginaAtual}&limite=${state.limiteCI}`
+      : `/comunicacoes/enviadas?pagina=${state.paginaAtual}&limite=${state.limiteCI}`;
+    const data = await api('GET', ep);
+    const cis = data.dados || [];
+    state.totalCI = data.paginacao?.total || cis.length;
+    const countEl = document.getElementById('tab-count-' + state.abaAtiva);
+    if (countEl) countEl.textContent = state.totalCI;
+    if (cis.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="ti ti-inbox"></i><p>Nenhuma C.I ${state.abaAtiva === 'recebidas' ? 'recebida' : 'enviada'} encontrada.</p></div></td></tr>`;
+      document.getElementById('ci-table-info').textContent = '0 comunicações';
+      document.getElementById('ci-pagination').innerHTML = '';
+      return;
+    }
+    tbody.innerHTML = cis.map(ci => renderizarLinhaCI(ci)).join('');
+    const inicio = (state.paginaAtual - 1) * state.limiteCI + 1;
+    const fim = Math.min(state.paginaAtual * state.limiteCI, state.totalCI);
+    document.getElementById('ci-table-info').innerHTML = `Exibindo <strong>${inicio}–${fim}</strong> de <strong>${state.totalCI}</strong> comunicações`;
+    renderizarPaginacao();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="ti ti-alert-circle"></i><p>Erro ao carregar: ${err.message}</p></div></td></tr>`;
+  }
+}
+
+function renderizarLinhaCI(ci) {
+  const data = ci.data_hora ? new Date(ci.data_hora).toLocaleDateString('pt-BR') : '—';
+  const estadoLabel = ci.estado === 'arquivada'
+    ? '<span class="status-badge archived">Arquivado</span>'
+    : ci.estado === 'enviada'
+    ? '<span class="status-badge read">Enviada</span>'
+    : '<span class="status-badge pending">Rascunho</span>';
+  return `<tr onclick="abrirCIDoBackend(${ci.id})" style="cursor:pointer">
+    <td><span class="priority-dot medium"></span></td>
+    <td><span class="ci-num">CI-${String(ci.id).padStart(4,'0')}</span></td>
+    <td class="ci-subject">${ci.titulo}<small>${ci.estado} · ${data}</small></td>
+    <td><span class="dept-tag"><i class="ti ti-building" style="font-size:11px"></i> Depto. ${ci.departamento_id}</span></td>
+    <td>${estadoLabel}</td>
+    <td class="ci-date">${data}</td>
+    <td></td>
+  </tr>`;
+}
+
+function renderizarPaginacao() {
+  const totalPaginas = Math.ceil(state.totalCI / state.limiteCI);
+  const pag = document.getElementById('ci-pagination');
+  if (totalPaginas <= 1) { pag.innerHTML = ''; return; }
+  let html = '';
+  if (state.paginaAtual > 1) html += `<button class="page-btn" onclick="irParaPagina(${state.paginaAtual-1})"><i class="ti ti-chevron-left"></i></button>`;
+  for (let i = 1; i <= totalPaginas; i++) {
+    if (i === state.paginaAtual) html += `<button class="page-btn active">${i}</button>`;
+    else if (i <= 2 || i >= totalPaginas-1 || Math.abs(i-state.paginaAtual) <= 1) html += `<button class="page-btn" onclick="irParaPagina(${i})">${i}</button>`;
+    else if (!html.endsWith('…</button>')) html += `<button class="page-btn" style="cursor:default">…</button>`;
+  }
+  if (state.paginaAtual < totalPaginas) html += `<button class="page-btn" onclick="irParaPagina(${state.paginaAtual+1})"><i class="ti ti-chevron-right"></i></button>`;
+  pag.innerHTML = html;
+}
+
+function irParaPagina(p) { state.paginaAtual = p; carregarCIs(); }
+
+function mudarAbaCI(aba, el) {
+  state.abaAtiva = aba; state.paginaAtual = 1;
+  document.querySelectorAll('.tab-bar .tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  carregarCIs();
+}
+
+// ═══════════════════════════════════════════════════════
+//  CI — ABRIR MODAL via API
+// ═══════════════════════════════════════════════════════
+async function abrirCIDoBackend(id) {
+  document.getElementById('modal-ci').classList.add('open');
+  document.getElementById('modal-ci-num').innerHTML = '<span class="spin"></span> Carregando...';
+  document.getElementById('modal-body-text').textContent = '';
+  try {
+    const data = await api('GET', '/comunicacoes/' + id);
+    const ci = data.dados;
+    state.ciAtual = ci;
+    const dataFmt = ci.data_hora ? new Date(ci.data_hora).toLocaleString('pt-BR') : '—';
+    document.getElementById('modal-ci-num').innerHTML = `<i class="ti ti-file-text" style="color:var(--usga-mid)"></i> CI-${String(ci.id).padStart(4,'0')}`;
+    document.getElementById('modal-from').textContent = `Usuário ${ci.usuario_id} · Depto. ${ci.departamento_id}`;
+    document.getElementById('modal-to').textContent = `Depto. ${ci.departamento_id}`;
+    document.getElementById('modal-date').textContent = dataFmt;
+    document.getElementById('modal-prio').innerHTML = ci.estado === 'arquivada'
+      ? '<span style="color:var(--text-muted)">⬤ Arquivada</span>'
+      : `<span style="color:var(--usga-mid);font-weight:600">⬤ ${ci.estado}</span>`;
+    document.getElementById('modal-subject').textContent = ci.titulo;
+    document.getElementById('modal-body-text').textContent = ci.descricao;
+    document.getElementById('btn-arquivar').style.display = ci.estado === 'arquivada' ? 'none' : '';
+    const btnLer = document.getElementById('btn-confirmar-leitura');
+    btnLer.disabled = false;
+    btnLer.innerHTML = '<i class="ti ti-check"></i> Confirmar Leitura';
+  } catch (err) {
+    document.getElementById('modal-body-text').textContent = 'Erro ao carregar: ' + err.message;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  CI — ARQUIVAR
+// ═══════════════════════════════════════════════════════
+async function arquivarCIAtual() {
+  if (!state.ciAtual) return;
+  const btn = document.getElementById('btn-arquivar');
+  btn.disabled = true;
+  try {
+    await api('POST', '/comunicacoes/' + state.ciAtual.id + '/arquivar');
+    toast('C.I arquivada com sucesso!');
+    closeModal();
+    carregarCIs();
+  } catch (err) {
+    toast('Erro ao arquivar: ' + err.message, 'error');
+    btn.disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  CONFIRMAÇÃO DE LEITURA
+// ═══════════════════════════════════════════════════════
+async function confirmarLeituraAtual() {
+  if (!state.ciAtual) return;
+  const btn = document.getElementById('btn-confirmar-leitura');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Confirmando...';
+  try {
+    await api('POST', '/comunicacoes/' + state.ciAtual.id + '/confirmar');
+    toast('Leitura confirmada com sucesso!');
+    btn.innerHTML = '<i class="ti ti-circle-check"></i> Leitura Confirmada';
+    carregarNotificacoes();
+  } catch (err) {
+    toast('Erro ao confirmar leitura: ' + err.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-check"></i> Confirmar Leitura';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  NOTIFICAÇÕES
+// ═══════════════════════════════════════════════════════
+async function carregarNotificacoes() {
+  try {
+    const data = await api('GET', '/notificacoes/listar');
+    const notifs = data.dados || [];
+    const naoLidas = notifs.filter(n => !n.lida && !n.data_leitura).length;
+    const badge = document.getElementById('notif-badge');
+    const dot = document.getElementById('notif-dot');
+    if (naoLidas > 0) { badge.textContent = naoLidas; badge.style.display = ''; dot.style.display = ''; }
+    else { badge.style.display = 'none'; dot.style.display = 'none'; }
+    const navBadge = document.querySelector('.nav-badge');
+    if (navBadge) navBadge.textContent = naoLidas || '';
+    const list = document.getElementById('notif-list');
+    if (notifs.length === 0) {
+      list.innerHTML = '<div class="notif-item"><div class="notif-body"><div class="notif-text" style="color:var(--text-muted)">Nenhuma notificação.</div></div></div>';
+    } else {
+      list.innerHTML = notifs.slice(0, 8).map(n => {
+        const lida = n.lida || n.data_leitura;
+        const tempo = n.data_hora ? formatarTempoRelativo(new Date(n.data_hora)) : '';
+        return `<div class="notif-item ${lida ? '' : 'unread'}" onclick="marcarNotifLida(${n.id}, this)" style="cursor:pointer">
+          <div class="notif-icon recv"><i class="ti ti-bell"></i></div>
+          <div class="notif-body">
+            <div class="notif-text">${n.mensagem}</div>
+            <div class="notif-time">${tempo}</div>
+          </div>
+          ${lida ? '' : '<div class="notif-unread-dot"></div>'}
+        </div>`;
+      }).join('');
+    }
+    document.getElementById('stat-notif').textContent = notifs.length;
+    document.getElementById('stat-pendentes').textContent = naoLidas;
+  } catch (err) { console.error('Erro notificações:', err); }
+}
+
+async function marcarNotifLida(id, el) {
+  try {
+    await api('PATCH', '/notificacoes/' + id + '/lida');
+    el.classList.remove('unread');
+    const dot = el.querySelector('.notif-unread-dot');
+    if (dot) dot.remove();
+    carregarNotificacoes();
+  } catch (e) {}
+}
+
+async function marcarTodasLidas() {
+  try {
+    await api('PATCH', '/notificacoes/todas-lidas');
+    toast('Todas as notificações marcadas como lidas.');
+    carregarNotificacoes();
+  } catch (err) { toast('Erro: ' + err.message, 'error'); }
+}
+
+function formatarTempoRelativo(data) {
+  const diff = (Date.now() - data.getTime()) / 1000;
+  if (diff < 60) return 'Agora mesmo';
+  if (diff < 3600) return `Há ${Math.floor(diff/60)} min`;
+  if (diff < 86400) return `Há ${Math.floor(diff/3600)}h`;
+  return `Há ${Math.floor(diff/86400)}d`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  NOVA CI
+// ═══════════════════════════════════════════════════════
+async function enviarCI(estado) {
+  estado = estado || document.getElementById('ci-estado').value;
+  const titulo = document.getElementById('ci-titulo').value.trim();
+  const descricao = document.getElementById('ci-descricao').value.trim();
+  const departamento_id = parseInt(document.getElementById('ci-departamento').value);
+  if (!titulo || !descricao || !departamento_id) { toast('Preencha todos os campos obrigatórios.', 'error'); return; }
+  const btn = document.getElementById('btn-enviar-ci');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Enviando...';
+  try {
+    const data = await api('POST', '/comunicacoes/criar', { titulo, descricao, departamento_id, estado });
+    const ciId = data.dados?.id;
+    const arquivo = document.getElementById('ci-arquivo').files[0];
+    if (arquivo && ciId) {
+      try {
+        const fd = new FormData();
+        fd.append('arquivo', arquivo);
+        fd.append('comunicacao_id', ciId);
+        await apiForm('/upload', fd);
+      } catch (e) { toast('C.I enviada, mas falha no anexo: ' + e.message, 'info'); }
+    }
+    toast(estado === 'rascunho' ? 'Rascunho salvo!' : 'C.I enviada com sucesso!');
+    limparFormularioCI();
+    showPage('dashboard');
+    await Promise.all([carregarCIs(), carregarNotificacoes(), atualizarStats()]);
+  } catch (err) {
+    toast('Erro: ' + err.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-send"></i> Enviar C.I';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-send"></i> Enviar C.I';
+  }
+}
+
+function salvarRascunho() { enviarCI('rascunho'); }
+
+function limparFormularioCI() {
+  document.getElementById('ci-titulo').value = '';
+  document.getElementById('ci-descricao').value = '';
+  document.getElementById('ci-departamento').value = '';
+  document.getElementById('ci-arquivo').value = '';
+  document.getElementById('upload-label').textContent = 'PDF, DOCX, XLSX, PNG — máx. 20 MB por arquivo';
+}
+
+function atualizarNomeArquivo() {
+  const arquivo = document.getElementById('ci-arquivo').files[0];
+  if (arquivo) document.getElementById('upload-label').textContent = '📎 ' + arquivo.name;
+}
+
+// ═══════════════════════════════════════════════════════
+//  STATS
+// ═══════════════════════════════════════════════════════
+async function atualizarStats() {
+  try {
+    const [env, rec] = await Promise.all([
+      api('GET', '/comunicacoes/enviadas?pagina=1&limite=1'),
+      api('GET', '/comunicacoes/recebidas?pagina=1&limite=1'),
+    ]);
+    document.getElementById('stat-enviadas').textContent = env.paginacao?.total ?? '—';
+    document.getElementById('stat-recebidas').textContent = rec.paginacao?.total ?? '—';
+  } catch (e) {}
+}
+
+// ═══════════════════════════════════════════════════════
+//  NAVEGAÇÃO
+// ═══════════════════════════════════════════════════════
 function showPage(name) {
   ['dashboard','nova','auditoria'].forEach(p => {
     var el = document.getElementById('page-'+p);
@@ -1568,25 +1990,16 @@ function showPage(name) {
     nova: 'Nova C.I <span>/ Redigir Comunicação</span>',
     auditoria: 'Auditoria <span>/ Histórico do Sistema</span>',
     cis: 'Minhas C.I <span>/ Caixa de Entrada</span>',
-    docs: 'Documentos <span>/ Arquivos</span>'
   };
   document.getElementById('page-title').innerHTML = titles[name] || 'C.I Digital';
-  document.querySelectorAll('.nav-item').forEach(function(el) {
-    el.classList.remove('active');
-  });
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
 }
 
-function showModal() {
-  document.getElementById('modal-ci').classList.add('open');
-  document.getElementById('modal-ci-num').innerHTML = '<i class="ti ti-file-text" style="color:var(--usga-mid)"></i> Nova C.I';
-  document.getElementById('modal-from').textContent = 'João Silva (você)';
-  document.getElementById('modal-to').textContent = 'Manutenção';
-  document.getElementById('modal-date').textContent = '12/05/2025';
-  document.getElementById('modal-prio').textContent = 'Média';
-  document.getElementById('modal-subject').textContent = 'Nova Comunicação';
-  document.getElementById('modal-body-text').textContent = 'Preencha os campos no formulário.';
-}
+function showModal() { showPage('nova'); }
 
+// ═══════════════════════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════════════════════
 function openCI(num, subject, from, to, prio, date, body, fromName) {
   document.getElementById('modal-ci').classList.add('open');
   document.getElementById('modal-ci-num').innerHTML = '<i class="ti ti-file-text" style="color:var(--usga-mid)"></i> ' + num;
@@ -1600,11 +2013,74 @@ function openCI(num, subject, from, to, prio, date, body, fromName) {
 
 function closeModal() {
   document.getElementById('modal-ci').classList.remove('open');
+  state.ciAtual = null;
+  const btn = document.getElementById('btn-confirmar-leitura');
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Confirmar Leitura'; }
 }
 
 document.getElementById('modal-ci').addEventListener('click', function(e) {
   if(e.target === this) closeModal();
 });
+
+// ═══════════════════════════════════════════════════════
+//  EXPORTAÇÃO CSV (AUDITORIA)
+// ═══════════════════════════════════════════════════════
+function exportAuditCSV() {
+  const rows = document.querySelectorAll('#page-auditoria tbody tr');
+  let csv = [['Data/Hora','Usuário','Ação','CI','Detalhes']];
+  rows.forEach(row => {
+    const cols = row.querySelectorAll('td');
+    csv.push([cols[0]?.innerText.trim()||'',cols[1]?.innerText.trim()||'',cols[2]?.innerText.trim()||'',cols[3]?.innerText.trim()||'',cols[4]?.innerText.trim()||'']);
+  });
+  const csvContent = csv.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = 'auditoria-ci-digital.csv';
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  toast('CSV exportado!');
+}
+
+// ═══════════════════════════════════════════════════════
+//  PDF / IMPRESSÃO
+// ═══════════════════════════════════════════════════════
+function printCI() { window.print(); }
+
+async function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const numero = document.getElementById('modal-ci-num')?.innerText || '';
+  const remetente = document.getElementById('modal-from')?.innerText || '';
+  const destinatario = document.getElementById('modal-to')?.innerText || '';
+  const data = document.getElementById('modal-date')?.innerText || '';
+  const prioridade = document.getElementById('modal-prio')?.innerText || '';
+  const assunto = document.getElementById('modal-subject')?.innerText || '';
+  const corpo = document.getElementById('modal-body-text')?.innerText || '';
+  doc.setFont('helvetica','bold'); doc.setFontSize(22); doc.text('C.I DIGITAL',20,20);
+  doc.setFontSize(11); doc.setFont('helvetica','normal'); doc.text('Sistema Interno de Comunicação Corporativa',20,28);
+  doc.line(20,33,190,33);
+  let y=50;
+  const addField=(label,value)=>{doc.setFont('helvetica','bold');doc.text(label+':',20,y);doc.setFont('helvetica','normal');doc.text(value,60,y);y+=10;};
+  addField('Número',numero); addField('Remetente',remetente); addField('Destinatário',destinatario);
+  addField('Data',data); addField('Prioridade',prioridade); addField('Assunto',assunto);
+  y+=10; doc.setFont('helvetica','bold'); doc.text('Conteúdo da Comunicação',20,y); y+=10;
+  doc.setFont('helvetica','normal');
+  const splitBody=doc.splitTextToSize(corpo,170); doc.text(splitBody,20,y);
+  doc.save(`${numero||'ci-digital'}.pdf`);
+}
+
+// ═══════════════════════════════════════════════════════
+//  LOGIN COM ENTER
+// ═══════════════════════════════════════════════════════
+document.getElementById('login-senha').addEventListener('keydown', e => { if(e.key==='Enter') fazerLogin(); });
+document.getElementById('login-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-senha').focus(); });
+
+// ═══════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════
+verificarSessao();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </body>
 </html>
