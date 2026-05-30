@@ -17,6 +17,15 @@ export const buscarCIporID = async (id) => {
   return results[0];
 };
 
+export const contarCIRecebidas = async (departamento_id, usuario_id, verTodos = false) => {
+  const sql = verTodos
+    ? 'SELECT COUNT(*) AS total FROM comunicacao WHERE usuario_id != ?'
+    : 'SELECT COUNT(*) AS total FROM comunicacao WHERE departamento_id = ? AND usuario_id != ?';
+  const params = verTodos ? [usuario_id] : [departamento_id, usuario_id];
+  const [results] = await pool.query(sql, params);
+  return results[0].total;
+};
+
 export const listarCIRecebidas = async (departamento_id, usuario_id, pagina = 1, limite = 20, verTodos = false) => {
   const offset = (pagina - 1) * limite;
   // exclui CIs criadas pelo próprio usuário — essas ficam só na aba "enviadas"
@@ -27,6 +36,11 @@ export const listarCIRecebidas = async (departamento_id, usuario_id, pagina = 1,
   const params = verTodos ? [usuario_id, limite, offset] : [departamento_id, usuario_id, limite, offset];
   const [results] = await pool.query(sql, params);
   return results;
+};
+
+export const contarCIEnviadas = async (usuario_id) => {
+  const [results] = await pool.query('SELECT COUNT(*) AS total FROM comunicacao WHERE usuario_id = ?', [usuario_id]);
+  return results[0].total;
 };
 
 export const listarCIEnviadas = async (usuario_id, pagina = 1, limite = 20) => {

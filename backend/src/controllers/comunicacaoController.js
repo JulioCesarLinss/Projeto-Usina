@@ -40,6 +40,8 @@ export const criarCI = async (req, res, next) => {
       }
 
       for (const dest of listaDestinatarios) {
+        // não notifica o próprio remetente
+        if (dest.usuario_id === usuario_id) continue;
         await destinatarioModel.adicionarDestinatario(resultado.insertId, dest.usuario_id, dest.departamento_id);
         await notificacaoModel.criarNotificacao(
           `Nova C.I recebida: ${titulo}`,
@@ -113,15 +115,12 @@ export const listarComunicacaoRecebidas = async (req,res,next) =>{
         // gerente (2) e master (1) veem CIs de todos os departamentos
         const verTodos = req.usuario.cargo_id <= 2;
 
-        let comunicacao;
+        let comunicacao, total;
         try{
-            comunicacao = await comunicacaoModel.listarCIRecebidas(
-                departamento_id,
-                req.usuario.id,
-                pagina,
-                limite,
-                verTodos
-            );
+            [comunicacao, total] = await Promise.all([
+                comunicacaoModel.listarCIRecebidas(departamento_id, req.usuario.id, pagina, limite, verTodos),
+                comunicacaoModel.contarCIRecebidas(departamento_id, req.usuario.id, verTodos)
+            ]);
         }catch(err){
             throw new DatabaseError(
                 'Erro ao listar comunicações',
@@ -132,11 +131,7 @@ export const listarComunicacaoRecebidas = async (req,res,next) =>{
         res.status(200).json({
             sucesso: true,
             dados: comunicacao,
-            paginacao: {
-                pagina,
-                limite,
-                total: comunicacao.length
-            }
+            paginacao: { pagina, limite, total }
         });
     }catch(err){
         next(err);
@@ -157,13 +152,12 @@ export const listarComunicacaoEnviadas = async (req,res,next) =>{
             );
         }
 
-        let comunicacao;
+        let comunicacao, total;
         try{
-            comunicacao = await comunicacaoModel.listarCIEnviadas(
-                usuario_id,
-                pagina,
-                limite
-            );
+            [comunicacao, total] = await Promise.all([
+                comunicacaoModel.listarCIEnviadas(usuario_id, pagina, limite),
+                comunicacaoModel.contarCIEnviadas(usuario_id)
+            ]);
         }catch(err){
             throw new DatabaseError(
                 'Erro ao listar comunicações',
@@ -174,11 +168,7 @@ export const listarComunicacaoEnviadas = async (req,res,next) =>{
         res.status(200).json({
             sucesso: true,
             dados: comunicacao,
-            paginacao: {
-                pagina,
-                limite,
-                total: comunicacao.length
-            }
+            paginacao: { pagina, limite, total }
         });
     }catch(err){
         next(err);
