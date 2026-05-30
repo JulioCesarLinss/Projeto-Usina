@@ -94,6 +94,32 @@ export const verificarAdmin = (req, res, next) => {
   }
 };
 
+// Permite apenas gerente (cargo 2) e master (cargo 1)
+export const verificarGerente = (req, res, next) => {
+  try {
+    if (!req.usuario)
+      throw new AuthenticationError('Não autenticado', 'NAO_AUTENTICADO');
+    if (req.usuario.cargo_id > 2)
+      throw new AuthorizationError('Acesso restrito a gerentes ou administradores', 'ACESSO_NEGADO');
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Permite supervisor (cargo 3), gerente (cargo 2) e master (cargo 1)
+export const verificarSupervisorOuAcima = (req, res, next) => {
+  try {
+    if (!req.usuario)
+      throw new AuthenticationError('Não autenticado', 'NAO_AUTENTICADO');
+    if (req.usuario.cargo_id > 3)
+      throw new AuthorizationError('Acesso restrito a supervisores ou acima', 'ACESSO_NEGADO');
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Garante que usuário só edita a si mesmo, a menos que seja admin
 export const verificarProprioOuAdmin = (req, res, next) => {
   try {

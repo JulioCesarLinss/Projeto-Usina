@@ -98,12 +98,16 @@ export const listarComunicacaoRecebidas = async (req,res,next) =>{
             );
         }
 
+        // gerente (2) e master (1) veem CIs de todos os departamentos
+        const verTodos = req.usuario.cargo_id <= 2;
+
         let comunicacao;
         try{
             comunicacao = await comunicacaoModel.listarCIRecebidas(
                 departamento_id,
                 pagina,
-                limite
+                limite,
+                verTodos
             );
         }catch(err){
             throw new DatabaseError(

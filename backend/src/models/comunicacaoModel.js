@@ -12,10 +12,15 @@ export const buscarCIporID = async (id) => {
   return results[0];
 };
 
-export const listarCIRecebidas = async (departamento_id, pagina = 1, limite = 20) => {
+export const listarCIRecebidas = async (departamento_id, pagina = 1, limite = 20, verTodos = false) => {
   const offset = (pagina - 1) * limite;
-  const sql = 'SELECT * FROM comunicacao WHERE departamento_id = ? LIMIT ? OFFSET ?';
-  const [results] = await pool.query(sql, [departamento_id, limite, offset]);
+  // verTodos = true para gerente e master (veem todos os departamentos)
+  // verTodos = false para supervisor e operacional (só o próprio departamento)
+  const sql = verTodos
+    ? 'SELECT * FROM comunicacao LIMIT ? OFFSET ?'
+    : 'SELECT * FROM comunicacao WHERE departamento_id = ? LIMIT ? OFFSET ?';
+  const params = verTodos ? [limite, offset] : [departamento_id, limite, offset];
+  const [results] = await pool.query(sql, params);
   return results;
 };
 
