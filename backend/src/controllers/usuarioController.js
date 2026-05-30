@@ -120,6 +120,14 @@ export const login = async (req, res, next) => {
       );
     }
 
+    // bloqueia login de usuários inativados pelo administrador
+    if (usuario.ativo === 0) {
+      throw new AuthenticationError(
+        'Usuário inativo. Entre em contato com o administrador.',
+        'USUARIO_INATIVO'
+      );
+    }
+
     if (!process.env.JWT_SECRET) {
       throw new Error('Erro ao gerar token');
     }
@@ -359,6 +367,7 @@ export const atualizarUsuario = async (req, res, next) => {
   }
 };
 
+// soft delete — inativa o usuário sem remover do banco
 export const deletarUsuario = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -392,21 +401,22 @@ export const deletarUsuario = async (req, res, next) => {
     let resultado;
 
     try {
-      resultado = await usuarioModel.deletarUsuario(id);
+      // inativarUsuario faz UPDATE ativo = 0 em vez de DELETE
+      resultado = await usuarioModel.inativarUsuario(id);
     } catch (err) {
       throw new DatabaseError(
-        'Erro ao deletar usuário',
-        'ERRO_DELETAR_USUARIO'
+        'Erro ao inativar usuário',
+        'ERRO_INATIVAR_USUARIO'
       );
     }
 
     if (resultado.affectedRows === 0) {
-      throw new Error('Falha ao deletar usuário');
+      throw new Error('Falha ao inativar usuário');
     }
 
     res.status(200).json({
       sucesso: true,
-      mensagem: 'Usuário deletado com sucesso',
+      mensagem: 'Usuário inativado com sucesso',
       dados: { id }
     });
 
