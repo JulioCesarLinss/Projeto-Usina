@@ -1445,7 +1445,7 @@
         <div class="form-row">
           <div class="form-group">
             <label>Departamento Destinatário</label>
-            <select id="ci-departamento">
+            <select id="ci-departamento" onchange="onDepartamentoChange()">
               <option value="">Selecionar...</option>
             </select>
           </div>
@@ -1456,6 +1456,20 @@
               <option value="enviada">Enviada</option>
             </select>
           </div>
+        </div>
+        <!-- Opção de destinatários: aparece após selecionar departamento -->
+        <div id="ci-destinatarios-wrap" style="display:none" class="form-group full">
+          <label>Destinatários</label>
+          <div style="display:flex;gap:12px;margin-bottom:10px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500">
+              <input type="radio" name="ci-dest-tipo" value="todos" checked onchange="onDestTipoChange()"> Todos do departamento
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500">
+              <input type="radio" name="ci-dest-tipo" value="especificos" onchange="onDestTipoChange()"> Selecionar usuários
+            </label>
+          </div>
+          <!-- Lista de usuários com checkbox, aparece só ao escolher "Selecionar usuários" -->
+          <div id="ci-usuarios-lista" style="display:none;display:flex;flex-direction:column;gap:6px;padding:10px;background:var(--usga-xpale);border:1px solid var(--border);border-radius:var(--radius)"></div>
         </div>
         <div class="form-group full">
           <label>Assunto</label>
@@ -1809,6 +1823,7 @@ async function abrirCIDoBackend(id) {
     document.getElementById('modal-body-text').textContent = ci.descricao;
     document.getElementById('btn-arquivar').style.display = ci.estado === 'arquivada' ? 'none' : '';
 
+    //mudanças  feitas para download de arquivo
     // Busca os anexos da CI no backend e renderiza cada um como link de download
     try {
       const anexosData = await api('GET', '/comunicacoes/' + id + '/anexos'); // rota criada em comunicacaoRoutes.js
@@ -1945,6 +1960,43 @@ function formatarTempoRelativo(data) {
 }
 
 // ═══════════════════════════════════════════════════════
+//  DESTINATÁRIOS — lógica de seleção por departamento
+//  Adicionado para permitir envio para todos ou usuários
+//  específicos de um departamento (backend: GET /usuarios/departamento/:id)
+// ═══════════════════════════════════════════════════════
+
+// onDepartamentoChange — dispara quando o usuário troca o departamento no select.
+// Busca os usuários daquele departamento via API e popula os checkboxes.
+// Exibe a seção de destinatários e reseta para "Todos" por padrão.
+async function onDepartamentoChange() {
+  const depId = document.getElementById('ci-departamento').value;
+  const wrap = document.getElementById('ci-destinatarios-wrap'); // seção inteira de destinatários
+  const lista = document.getElementById('ci-usuarios-lista');    // container dos checkboxes
+  lista.innerHTML = '';
+  document.querySelector('input[name="ci-dest-tipo"][value="todos"]').checked = true;
+  lista.style.display = 'none';
+  if (!depId) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  try {
+    const data = await api('GET', '/usuarios/departamento/' + depId); // rota criada em usuarioRoutes.js
+    const usuarios = data.dados || [];
+    // monta um checkbox por usuário do departamento
+    lista.innerHTML = usuarios.map(u =>
+      `<label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" class="ci-usuario-check" value="${u.id}"> ${u.nome}
+       </label>`
+    ).join('');
+  } catch (e) { /* silencia erro de listagem */ }
+}
+
+// onDestTipoChange — dispara quando o usuário troca entre "Todos" e "Selecionar usuários".
+// Exibe ou oculta a lista de checkboxes conforme a opção escolhida.
+function onDestTipoChange() {
+  const tipo = document.querySelector('input[name="ci-dest-tipo"]:checked')?.value;
+  document.getElementById('ci-usuarios-lista').style.display = tipo === 'especificos' ? '' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════
 //  NOVA CI
 // ═══════════════════════════════════════════════════════
 async function enviarCI(estado) {
@@ -1953,11 +2005,23 @@ async function enviarCI(estado) {
   const descricao = document.getElementById('ci-descricao').value.trim();
   const departamento_id = parseInt(document.getElementById('ci-departamento').value);
   if (!titulo || !descricao || !departamento_id) { toast('Preencha todos os campos obrigatórios.', 'error'); return; }
+
+  // Monta a lista de destinatários conforme o radio selecionado:
+  // — "todos": envia array vazio, o backend notifica o departamento inteiro
+  // — "especificos": envia apenas os usuario_id dos checkboxes marcados
+  const tipo = document.querySelector('input[name="ci-dest-tipo"]:checked')?.value;
+  let destinatarios = [];
+  if (tipo === 'especificos') {
+    const checks = document.querySelectorAll('.ci-usuario-check:checked');
+    if (checks.length === 0) { toast('Selecione ao menos um destinatário.', 'error'); return; }
+    destinatarios = Array.from(checks).map(c => ({ usuario_id: parseInt(c.value), departamento_id }));
+  }
+
   const btn = document.getElementById('btn-enviar-ci');
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> Enviando...';
   try {
-    const data = await api('POST', '/comunicacoes/criar', { titulo, descricao, departamento_id, estado });
+    const data = await api('POST', '/comunicacoes/criar', { titulo, descricao, departamento_id, estado, destinatarios });
     const ciId = data.dados?.id;
     const arquivo = document.getElementById('ci-arquivo').files[0];
     if (arquivo && ciId) {
@@ -1990,6 +2054,10 @@ function limparFormularioCI() {
   document.getElementById('ci-departamento').value = '';
   document.getElementById('ci-arquivo').value = '';
   document.getElementById('upload-label').textContent = 'PDF, DOCX, XLSX, PNG — máx. 20 MB por arquivo';
+  document.getElementById('ci-destinatarios-wrap').style.display = 'none';
+  document.getElementById('ci-usuarios-lista').style.display = 'none';
+  document.getElementById('ci-usuarios-lista').innerHTML = '';
+  document.querySelector('input[name="ci-dest-tipo"][value="todos"]').checked = true;
 }
 
 function atualizarNomeArquivo() {

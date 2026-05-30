@@ -54,3 +54,9 @@ export const deletarUsuario = async (id) => {
   const [result] = await pool.query(sql, [id]);
   return result;
 };
+
+export const listarPorDepartamento = async (departamento_id) => {
+  const sql = 'SELECT id, nome, email FROM usuario WHERE departamento_id = ?';
+  const [results] = await pool.query(sql, [departamento_id]);
+  return results;
+};

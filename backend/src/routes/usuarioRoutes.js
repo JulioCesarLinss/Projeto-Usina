@@ -27,6 +27,9 @@ router.post('/logout', verificarToken, usuarioController.logout);
 // Listar todos os usuários — qualquer usuário logado pode ver
 router.get('/', verificarToken, usuarioController.listarUsuarios);
 
+// Listar usuários de um departamento — usado no formulário de nova CI
+router.get('/departamento/:id', verificarToken, usuarioController.listarPorDepartamento);
+
 // Buscar usuário por ID — qualquer usuário logado pode ver
 router.get('/:id', verificarToken, usuarioController.buscarUsuario);
 

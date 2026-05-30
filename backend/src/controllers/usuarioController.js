@@ -435,3 +435,16 @@ export const logout = async (req, res, next) => {
     next(err);
   }
 };
+
+export const listarPorDepartamento = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ sucesso: false, erro: 'ID de departamento inválido', codigo: 'ID_INVALIDO' });
+    }
+    const usuarios = await usuarioModel.listarPorDepartamento(id);
+    res.status(200).json({ sucesso: true, dados: usuarios });
+  } catch (err) {
+    next(err);
+  }
+};
