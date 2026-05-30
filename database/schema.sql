@@ -72,6 +72,7 @@ CREATE TABLE notificacoes(
   data_hora DATETIME NOT NULL,
   usuario_id INT NOT NULL,
   comunicacao_id INT NOT NULL,
+  lida TINYINT NOT NULL DEFAULT 0,
   FOREIGN KEY (usuario_id) REFERENCES usuario(id),
   FOREIGN KEY (comunicacao_id) REFERENCES comunicacao(id)
 );

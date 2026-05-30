@@ -77,6 +77,20 @@ export const marcarComoLida = async (req, res, next) => {
   }
 };
 
+export const marcarPorComunicacao = async (req, res, next) => {
+  try {
+    const { comunicacao_id } = req.params;
+    const usuario_id = req.usuario.id;
+    if (!comunicacao_id || isNaN(comunicacao_id)) {
+      throw new ValidationError('ID inválido', 'ID_INVALIDO', []);
+    }
+    await notificacaoModel.marcarPorComunicacao(comunicacao_id, usuario_id);
+    res.status(200).json({ sucesso: true, mensagem: 'Notificação da CI marcada como lida' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const marcarTodasComoLidas = async (req, res, next) => {
   try {
     const usuario_id = req.usuario.id;

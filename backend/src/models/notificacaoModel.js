@@ -25,3 +25,10 @@ export const marcarTodasComoLidas = async (usuario_id) => {
   const [result] = await pool.query(sql, [usuario_id]);
   return result;
 };
+
+// marca como lida a notificação vinculada a uma CI específica
+export const marcarPorComunicacao = async (comunicacao_id, usuario_id) => {
+  const sql = 'UPDATE notificacoes SET lida = TRUE WHERE comunicacao_id = ? AND usuario_id = ?';
+  const [result] = await pool.query(sql, [comunicacao_id, usuario_id]);
+  return result;
+};

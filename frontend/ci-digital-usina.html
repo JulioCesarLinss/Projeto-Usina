@@ -1924,10 +1924,17 @@ async function confirmarLeituraAtual() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> Confirmando...';
   try {
-    await api('POST', '/comunicacoes/' + state.ciAtual.id + '/confirmar');
-    toast('Leitura confirmada com sucesso!');
+    try {
+      await api('POST', '/comunicacoes/' + state.ciAtual.id + '/confirmar');
+    } catch (err) {
+      // ignora silenciosamente se leitura já foi confirmada antes
+      if (!err.message?.includes('já confirmada')) throw err;
+    }
+    await api('PATCH', '/notificacoes/ci/' + state.ciAtual.id + '/lida');
+    toast('Leitura confirmada!');
     btn.innerHTML = '<i class="ti ti-circle-check"></i> Leitura Confirmada';
-    carregarNotificacoes();
+    await carregarNotificacoes();
+    atualizarStats();
   } catch (err) {
     toast('Erro ao confirmar leitura: ' + err.message, 'error');
     btn.disabled = false;
@@ -1949,24 +1956,25 @@ async function carregarNotificacoes() {
     else { badge.style.display = 'none'; dot.style.display = 'none'; }
     const navBadge = document.querySelector('.nav-badge');
     if (navBadge) navBadge.textContent = naoLidas || '';
+    // exibe apenas notificações não lidas — somem ao ser marcadas
+    const naoLidasList = notifs.filter(n => !n.lida && !n.data_leitura);
     const list = document.getElementById('notif-list');
-    if (notifs.length === 0) {
+    if (naoLidasList.length === 0) {
       list.innerHTML = '<div class="notif-item"><div class="notif-body"><div class="notif-text" style="color:var(--text-muted)">Nenhuma notificação.</div></div></div>';
     } else {
-      list.innerHTML = notifs.slice(0, 8).map(n => {
-        const lida = n.lida || n.data_leitura;
+      list.innerHTML = naoLidasList.slice(0, 8).map(n => {
         const tempo = n.data_hora ? formatarTempoRelativo(new Date(n.data_hora)) : '';
-        return `<div class="notif-item ${lida ? '' : 'unread'}" onclick="marcarNotifLida(${n.id}, this)" style="cursor:pointer">
+        return `<div class="notif-item unread" onclick="marcarNotifLida(${n.id}, this)" style="cursor:pointer">
           <div class="notif-icon recv"><i class="ti ti-bell"></i></div>
           <div class="notif-body">
             <div class="notif-text">${n.mensagem}</div>
             <div class="notif-time">${tempo}</div>
           </div>
-          ${lida ? '' : '<div class="notif-unread-dot"></div>'}
+          <div class="notif-unread-dot"></div>
         </div>`;
       }).join('');
     }
-    document.getElementById('stat-notif').textContent = notifs.length;
+    document.getElementById('stat-notif').textContent = naoLidas;
     document.getElementById('stat-pendentes').textContent = naoLidas;
   } catch (err) { console.error('Erro notificações:', err); }
 }
@@ -1974,10 +1982,8 @@ async function carregarNotificacoes() {
 async function marcarNotifLida(id, el) {
   try {
     await api('PATCH', '/notificacoes/' + id + '/lida');
-    el.classList.remove('unread');
-    const dot = el.querySelector('.notif-unread-dot');
-    if (dot) dot.remove();
-    carregarNotificacoes();
+    el.remove(); // remove imediatamente da lista
+    await carregarNotificacoes(); // atualiza contadores
   } catch (e) {}
 }
 
