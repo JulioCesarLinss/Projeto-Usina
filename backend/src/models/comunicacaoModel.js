@@ -7,19 +7,24 @@ export const criarComunicacao = async (titulo, data_hora, estado, descricao, usu
 };
 
 export const buscarCIporID = async (id) => {
-  const sql = 'SELECT id, titulo, data_hora, estado, descricao, usuario_id, departamento_id FROM comunicacao WHERE id = ?';
+  const sql = `
+    SELECT c.id, c.titulo, c.data_hora, c.estado, c.descricao, c.usuario_id, c.departamento_id,
+           u.nome AS usuario_nome
+    FROM comunicacao c
+    INNER JOIN usuario u ON c.usuario_id = u.id
+    WHERE c.id = ?`;
   const [results] = await pool.query(sql, [id]);
   return results[0];
 };
 
-export const listarCIRecebidas = async (departamento_id, pagina = 1, limite = 20, verTodos = false) => {
+export const listarCIRecebidas = async (departamento_id, usuario_id, pagina = 1, limite = 20, verTodos = false) => {
   const offset = (pagina - 1) * limite;
+  // exclui CIs criadas pelo próprio usuário — essas ficam só na aba "enviadas"
   // verTodos = true para gerente e master (veem todos os departamentos)
-  // verTodos = false para supervisor e operacional (só o próprio departamento)
   const sql = verTodos
-    ? 'SELECT * FROM comunicacao LIMIT ? OFFSET ?'
-    : 'SELECT * FROM comunicacao WHERE departamento_id = ? LIMIT ? OFFSET ?';
-  const params = verTodos ? [limite, offset] : [departamento_id, limite, offset];
+    ? 'SELECT * FROM comunicacao WHERE usuario_id != ? LIMIT ? OFFSET ?'
+    : 'SELECT * FROM comunicacao WHERE departamento_id = ? AND usuario_id != ? LIMIT ? OFFSET ?';
+  const params = verTodos ? [usuario_id, limite, offset] : [departamento_id, usuario_id, limite, offset];
   const [results] = await pool.query(sql, params);
   return results;
 };

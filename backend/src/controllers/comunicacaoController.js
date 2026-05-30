@@ -2,6 +2,7 @@ import * as comunicacaoModel from '../models/comunicacaoModel.js';
 import * as notificacaoModel from '../models/notificacaoModel.js';
 import * as destinatarioModel from '../models/destinatarioModel.js';
 import * as anexoModel from '../models/anexoModel.js';
+import * as usuarioModel from '../models/usuarioModel.js';
 import { ValidationError, NotFoundError, DatabaseError } from '../utils/appError.js';
 import { registrarLog, getClientIP } from '../middlewares/auditMiddleware.js';
 
@@ -28,16 +29,24 @@ export const criarCI = async (req, res, next) => {
       throw new DatabaseError('Erro ao criar comunicação', 'ERRO_CRIAR_COMUNICACAO');
     }
 
-    // cria notificação automaticamente após criar a CI
-    if (destinatarios && destinatarios.length > 0) {
-    for (const dest of destinatarios) {
+    // notificações só são criadas quando a CI é enviada, nunca para rascunhos
+    if (estadoFinal === 'enviada') {
+      let listaDestinatarios = destinatarios || [];
+
+      // se nenhum destinatário específico foi escolhido, notifica todos do departamento
+      if (listaDestinatarios.length === 0) {
+        const usuariosDept = await usuarioModel.listarPorDepartamento(departamento_id);
+        listaDestinatarios = usuariosDept.map(u => ({ usuario_id: u.id, departamento_id }));
+      }
+
+      for (const dest of listaDestinatarios) {
         await destinatarioModel.adicionarDestinatario(resultado.insertId, dest.usuario_id, dest.departamento_id);
         await notificacaoModel.criarNotificacao(
-        `Nova C.I recebida: ${titulo}`,
-        dest.usuario_id,
-        resultado.insertId
+          `Nova C.I recebida: ${titulo}`,
+          dest.usuario_id,
+          resultado.insertId
         );
-        }
+      }
     }
 
     await registrarLog(usuario_id, `CI_CRIADA estado=${estadoFinal}`, getClientIP(req), resultado.insertId);
@@ -108,6 +117,7 @@ export const listarComunicacaoRecebidas = async (req,res,next) =>{
         try{
             comunicacao = await comunicacaoModel.listarCIRecebidas(
                 departamento_id,
+                req.usuario.id,
                 pagina,
                 limite,
                 verTodos

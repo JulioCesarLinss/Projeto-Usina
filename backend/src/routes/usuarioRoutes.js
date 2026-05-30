@@ -21,12 +21,11 @@ router.post('/login', loginRateLimiter, usuarioController.login);
 // Logout — cancela o token imediatamente
 router.post('/logout', verificarToken, usuarioController.logout);
 
-// Cadastro — apenas gerente ou master podem criar usuários
-// Fluxo: gerente cria o usuário com cargo correto → usuário troca a senha depois
-router.post('/cadastro', verificarToken, verificarGerente, usuarioController.cadastrarUsuario);
+// Cadastro — apenas administrador geral pode criar usuários
+router.post('/cadastro', verificarToken, verificarAdmin, usuarioController.cadastrarUsuario);
 
-// Listar todos os usuários — apenas gerente ou master
-router.get('/', verificarToken, verificarGerente, usuarioController.listarUsuarios);
+// Listar todos os usuários — apenas administrador geral
+router.get('/', verificarToken, verificarAdmin, usuarioController.listarUsuarios);
 
 // Listar usuários de um departamento — usado no formulário de nova CI
 router.get('/departamento/:id', verificarToken, usuarioController.listarPorDepartamento);

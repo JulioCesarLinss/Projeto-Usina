@@ -2,13 +2,17 @@ import * as logModel from '../models/logModel.js';
 import { DatabaseError } from '../utils/appError.js';
 
 // listarAuditoria — retorna os logs do sistema com filtros e paginação.
-// Restrito a gerente e master pelo middleware na rota.
+// Admin e gerente veem todos os logs. Supervisor vê apenas logs do próprio departamento.
 export const listarAuditoria = async (req, res, next) => {
   try {
     const { usuario_id, acao, data_inicio, data_fim, pagina, limite } = req.query;
+    const cargo = req.usuario.cargo_id;
+    const departamento_id = req.usuario.departamento_id;
 
     const filtros = {
-      usuario_id: usuario_id || null,
+      // supervisor (cargo 3) fica restrito ao próprio departamento
+      usuario_id: cargo === 3 ? null : (usuario_id || null),
+      departamento_id: cargo === 3 ? departamento_id : null,
       acao: acao || null,
       data_inicio: data_inicio || null,
       data_fim: data_fim || null,

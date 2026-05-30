@@ -1160,25 +1160,17 @@
       <i class="ti ti-layout-dashboard"></i>
       Dashboard
     </div>
-    <div class="nav-item" onclick="showPage('cis')">
-      <i class="ti ti-file-text"></i>
-      Minhas C.I
-      <span class="nav-badge">3</span>
-    </div>
     <div class="nav-item" onclick="showPage('nova')">
       <i class="ti ti-send"></i>
       Nova C.I
-    </div>
-    <div class="nav-item" onclick="showPage('docs')">
-      <i class="ti ti-folder"></i>
-      Documentos
     </div>
     <div class="nav-label">Gerencial</div>
     <div class="nav-item admin-only" onclick="showPage('departamentos')">
       <i class="ti ti-building"></i>
       Departamentos
     </div>
-    <div class="nav-item" onclick="showPage('auditoria')">
+    <!-- auditoria visível para supervisor, gerente e admin -->
+    <div class="nav-item supervisor-acima-only" onclick="showPage('auditoria')">
       <i class="ti ti-activity"></i>
       Auditoria
     </div>
@@ -1333,96 +1325,24 @@
           </div>
         </div>
 
-        <!-- DEPARTMENTS -->
+        <!-- DEPARTMENTS — lista os departamentos reais do sistema -->
         <div class="card">
           <div class="card-header">
             <div class="card-title"><i class="ti ti-building"></i> Por Departamento</div>
           </div>
-          <div class="dept-list">
-            <div class="dept-row">
-              <span class="dept-dot" style="background:#43931F"></span>
-              Industrial
-              <span class="count">14</span>
-            </div>
-            <div class="dept-row">
-              <span class="dept-dot" style="background:#1A6B9A"></span>
-              Financeiro
-              <span class="count">9</span>
-            </div>
-            <div class="dept-row">
-              <span class="dept-dot" style="background:#B07A18"></span>
-              RH & Pessoal
-              <span class="count">7</span>
-            </div>
-            <div class="dept-row">
-              <span class="dept-dot" style="background:#7AB260"></span>
-              Qualidade
-              <span class="count">6</span>
-            </div>
-            <div class="dept-row">
-              <span class="dept-dot" style="background:#C8382A"></span>
-              Segurança
-              <span class="count">5</span>
-            </div>
-            <div class="dept-row">
-              <span class="dept-dot" style="background:#888"></span>
-              TI
-              <span class="count">3</span>
-            </div>
-            <div class="dept-row">
-              <span class="dept-dot" style="background:#5A3A1A"></span>
-              Manutenção
-              <span class="count">3</span>
-            </div>
+          <div class="dept-list" id="dept-list">
+            <div class="empty-state"><i class="ti ti-loader" style="animation:spin .6s linear infinite;display:inline-block"></i></div>
           </div>
         </div>
 
-        <!-- AUDIT TRAIL -->
-        <div class="card">
+        <!-- AUDIT TRAIL — exibe os últimos logs reais do sistema -->
+        <div class="card supervisor-acima-only">
           <div class="card-header">
             <div class="card-title"><i class="ti ti-activity"></i> Histórico Recente</div>
             <button class="btn-ghost" onclick="showPage('auditoria')">Ver tudo</button>
           </div>
-          <div class="audit-list">
-            <div class="audit-item">
-              <div class="audit-line">
-                <div class="audit-dot" style="background:var(--danger)"></div>
-                <div class="audit-connector"></div>
-              </div>
-              <div class="audit-body">
-                <div class="audit-action"><strong>CI-2025-047</strong> recebida e marcada como urgente</div>
-                <div class="audit-meta">Paulo Mendes · 09/05/2025 08:14</div>
-              </div>
-            </div>
-            <div class="audit-item">
-              <div class="audit-line">
-                <div class="audit-dot"></div>
-                <div class="audit-connector"></div>
-              </div>
-              <div class="audit-body">
-                <div class="audit-action"><strong>João Silva</strong> leu CI-2025-043</div>
-                <div class="audit-meta">08/05/2025 14:32</div>
-              </div>
-            </div>
-            <div class="audit-item">
-              <div class="audit-line">
-                <div class="audit-dot" style="background:var(--usga-mid)"></div>
-                <div class="audit-connector"></div>
-              </div>
-              <div class="audit-body">
-                <div class="audit-action"><strong>CI-2025-040</strong> arquivada automaticamente</div>
-                <div class="audit-meta">07/05/2025 00:00</div>
-              </div>
-            </div>
-            <div class="audit-item">
-              <div class="audit-line">
-                <div class="audit-dot"></div>
-              </div>
-              <div class="audit-body">
-                <div class="audit-action"><strong>CI-2025-045</strong> enviada para 12 destinatários</div>
-                <div class="audit-meta">Carla Brito · 07/05/2025 09:05</div>
-              </div>
-            </div>
+          <div class="audit-list" id="audit-list-dashboard">
+            <div class="empty-state"><i class="ti ti-loader" style="animation:spin .6s linear infinite;display:inline-block"></i></div>
           </div>
         </div>
 
@@ -1494,7 +1414,6 @@
           <input type="file" id="ci-arquivo" style="display:none" accept=".pdf,.docx,.xlsx,.png,.jpg" onchange="atualizarNomeArquivo()">
         </div>
         <div class="form-actions">
-          <button class="btn-ghost" onclick="salvarRascunho()"><i class="ti ti-device-floppy"></i> Salvar Rascunho</button>
           <button class="btn btn-primary" id="btn-enviar-ci" onclick="enviarCI()"><i class="ti ti-send"></i> Enviar C.I</button>
         </div>
       </div>
@@ -1636,9 +1555,8 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-ghost" onclick="downloadPDF()"><i class="ti ti-download"></i> Baixar PDF</button>
-      <button class="btn-ghost" onclick="printCI()"><i class="ti ti-printer"></i> Imprimir</button>
-      <button class="btn-ghost" id="btn-arquivar" onclick="arquivarCIAtual()"><i class="ti ti-archive"></i> Arquivar</button>
+      <!-- btn-arquivar: visibilidade controlada pelo JS — exibido só para admin -->
+      <button class="btn-ghost" id="btn-arquivar" onclick="arquivarCIAtual()" style="display:none"><i class="ti ti-archive"></i> Arquivar</button>
       <button class="btn btn-primary" id="btn-confirmar-leitura" onclick="confirmarLeituraAtual()"><i class="ti ti-check"></i> Confirmar Leitura</button>
     </div>
   </div>
@@ -1810,6 +1728,10 @@ async function iniciarApp() {
   document.getElementById('ci-data').value = new Date().toISOString().split('T')[0];
   await Promise.all([carregarCIs(), carregarNotificacoes()]);
   atualizarStats();
+  carregarDeptDashboard();
+  if (state.usuario.cargo_id <= 3) carregarAuditDashboard();
+  // aplica visibilidade dos menus conforme o cargo do usuário logado
+  aplicarPermissoesFrontend(state.usuario);
 }
 
 function verificarSessao() {
@@ -1927,7 +1849,7 @@ async function abrirCIDoBackend(id) {
     state.ciAtual = ci;
     const dataFmt = ci.data_hora ? new Date(ci.data_hora).toLocaleString('pt-BR') : '—';
     document.getElementById('modal-ci-num').innerHTML = `<i class="ti ti-file-text" style="color:var(--usga-mid)"></i> CI-${String(ci.id).padStart(4,'0')}`;
-    document.getElementById('modal-from').textContent = `Usuário ${ci.usuario_id} · Depto. ${ci.departamento_id}`;
+    document.getElementById('modal-from').textContent = `${ci.usuario_nome || 'Usuário ' + ci.usuario_id} · Depto. ${ci.departamento_id}`;
     document.getElementById('modal-to').textContent = `Depto. ${ci.departamento_id}`;
     document.getElementById('modal-date').textContent = dataFmt;
     document.getElementById('modal-prio').innerHTML = ci.estado === 'arquivada'
@@ -1935,7 +1857,9 @@ async function abrirCIDoBackend(id) {
       : `<span style="color:var(--usga-mid);font-weight:600">⬤ ${ci.estado}</span>`;
     document.getElementById('modal-subject').textContent = ci.titulo;
     document.getElementById('modal-body-text').textContent = ci.descricao;
-    document.getElementById('btn-arquivar').style.display = ci.estado === 'arquivada' ? 'none' : '';
+    // arquivar só aparece para admin e somente se a CI não estiver arquivada
+    const isAdmin = state.usuario?.cargo_id === 1;
+    document.getElementById('btn-arquivar').style.display = (isAdmin && ci.estado !== 'arquivada') ? '' : 'none';
 
     //mudanças  feitas para download de arquivo
     // Busca os anexos da CI no backend e renderiza cada um como link de download
@@ -2197,6 +2121,11 @@ async function atualizarStats() {
 //  NAVEGAÇÃO
 // ═══════════════════════════════════════════════════════
 function showPage(name) {
+  // bloqueia acesso a páginas restritas conforme o cargo do usuário
+  if (!validarAcessoPagina(name, state.usuario)) {
+    toast('Você não tem permissão para acessar essa página.', 'error');
+    return;
+  }
   // Ao abrir configurações, preenche o avatar com as iniciais do usuário logado
   if (name === 'configuracoes' && state.usuario) {
     const iniciais = (state.usuario.nome || '').split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
@@ -2268,32 +2197,90 @@ function exportAuditCSV() {
   toast('CSV exportado!');
 }
 
-// ═══════════════════════════════════════════════════════
-//  PDF / IMPRESSÃO
-// ═══════════════════════════════════════════════════════
-function printCI() { window.print(); }
 
-async function downloadPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const numero = document.getElementById('modal-ci-num')?.innerText || '';
-  const remetente = document.getElementById('modal-from')?.innerText || '';
-  const destinatario = document.getElementById('modal-to')?.innerText || '';
-  const data = document.getElementById('modal-date')?.innerText || '';
-  const prioridade = document.getElementById('modal-prio')?.innerText || '';
-  const assunto = document.getElementById('modal-subject')?.innerText || '';
-  const corpo = document.getElementById('modal-body-text')?.innerText || '';
-  doc.setFont('helvetica','bold'); doc.setFontSize(22); doc.text('C.I DIGITAL',20,20);
-  doc.setFontSize(11); doc.setFont('helvetica','normal'); doc.text('Sistema Interno de Comunicação Corporativa',20,28);
-  doc.line(20,33,190,33);
-  let y=50;
-  const addField=(label,value)=>{doc.setFont('helvetica','bold');doc.text(label+':',20,y);doc.setFont('helvetica','normal');doc.text(value,60,y);y+=10;};
-  addField('Número',numero); addField('Remetente',remetente); addField('Destinatário',destinatario);
-  addField('Data',data); addField('Prioridade',prioridade); addField('Assunto',assunto);
-  y+=10; doc.setFont('helvetica','bold'); doc.text('Conteúdo da Comunicação',20,y); y+=10;
-  doc.setFont('helvetica','normal');
-  const splitBody=doc.splitTextToSize(corpo,170); doc.text(splitBody,20,y);
-  doc.save(`${numero||'ci-digital'}.pdf`);
+// ═══════════════════════════════════════════════════════
+//  DASHBOARD — departamentos e histórico recente reais
+// ═══════════════════════════════════════════════════════
+
+// carregarDeptDashboard — lista os departamentos reais do banco no painel lateral
+async function carregarDeptDashboard() {
+  const container = document.getElementById('dept-list');
+  if (!container) return;
+  try {
+    const data = await api('GET', '/departamentos/listar');
+    const depts = data.dados || [];
+    const cores = ['#43931F','#1A6B9A','#B07A18','#7AB260','#C8382A','#888','#5A3A1A'];
+    if (depts.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>Nenhum departamento.</p></div>';
+      return;
+    }
+    container.innerHTML = depts.map((d, i) => `
+      <div class="dept-row">
+        <span class="dept-dot" style="background:${cores[i % cores.length]}"></span>
+        ${d.nome}
+      </div>`).join('');
+  } catch (e) {
+    container.innerHTML = '<div class="empty-state"><p>Erro ao carregar.</p></div>';
+  }
+}
+
+// carregarAuditDashboard — exibe os 4 logs mais recentes no painel lateral
+async function carregarAuditDashboard() {
+  const container = document.getElementById('audit-list-dashboard');
+  if (!container) return;
+  try {
+    const data = await api('GET', '/auditoria/listar?limite=4');
+    const logs = data.dados || [];
+    if (logs.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>Nenhum registro.</p></div>';
+      return;
+    }
+    container.innerHTML = logs.map((l, i) => `
+      <div class="audit-item">
+        <div class="audit-line">
+          <div class="audit-dot"></div>
+          ${i < logs.length - 1 ? '<div class="audit-connector"></div>' : ''}
+        </div>
+        <div class="audit-body">
+          <div class="audit-action"><strong>${l.usuario_nome}</strong> — ${l.acao_realizada}</div>
+          <div class="audit-meta">${new Date(l.data_hora).toLocaleString('pt-BR')}</div>
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    container.innerHTML = '<div class="empty-state"><p>Sem permissão ou erro.</p></div>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  PERMISSÕES — controle de visibilidade por cargo
+// ═══════════════════════════════════════════════════════
+
+// aplicarPermissoesFrontend — oculta menus e elementos que o cargo do usuário não pode ver.
+// Chamada em iniciarApp() após o login.
+function aplicarPermissoesFrontend(usuario) {
+  const cargo = usuario?.cargo_id || 4;
+  // admin-only: visível apenas para cargo 1
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = cargo === 1 ? '' : 'none';
+  });
+  // gerente-admin-only: visível para cargo 1 e 2
+  document.querySelectorAll('.gerente-admin-only').forEach(el => {
+    el.style.display = cargo <= 2 ? '' : 'none';
+  });
+  // supervisor-acima-only: visível para cargo 1, 2 e 3
+  document.querySelectorAll('.supervisor-acima-only').forEach(el => {
+    el.style.display = cargo <= 3 ? '' : 'none';
+  });
+}
+
+// validarAcessoPagina — retorna false se o usuário não pode acessar a página.
+// Chamada em showPage() antes de trocar de tela.
+function validarAcessoPagina(pagina, usuario) {
+  const cargo = usuario?.cargo_id || 4;
+  if (pagina === 'departamentos' && cargo !== 1) return false;
+  if (pagina === 'relatorios' && cargo > 2) return false;
+  if (pagina === 'auditoria' && cargo > 3) return false;
+  return true;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2307,41 +2294,6 @@ document.getElementById('login-email').addEventListener('keydown', e => { if(e.k
 // ═══════════════════════════════════════════════════════
 verificarSessao();
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </body>
 </html>
 
-<script>
-window.PERMISSOES_PRODUCAO = {
-  ADMIN_GERAL: 1,
-  GERENTE: 2,
-  SUPERVISOR: 3,
-  FUNCIONARIO: 4
-};
-
-function aplicarPermissoesFrontend(usuario){
-  const cargo = usuario?.cargo_id || 4;
-
-  document.querySelectorAll('.admin-only').forEach(el=>{
-    el.style.display = cargo === 1 ? '' : 'none';
-  });
-
-  document.querySelectorAll('.gerente-admin-only').forEach(el=>{
-    el.style.display = cargo <= 2 ? '' : 'none';
-  });
-}
-
-function validarAcessoPagina(pagina, usuario){
-  const cargo = usuario?.cargo_id || 4;
-
-  if(pagina === 'departamentos' && cargo !== 1){
-    return false;
-  }
-
-  if(pagina === 'relatorios' && cargo > 2){
-    return false;
-  }
-
-  return true;
-}
-</script>
