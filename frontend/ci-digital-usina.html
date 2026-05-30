@@ -1192,6 +1192,11 @@
       Notificações
       <span class="nav-badge urgent">5</span>
     </div>
+    <!-- Item de configurações — disponível para todos os usuários -->
+    <div class="nav-item" onclick="showPage('configuracoes')">
+      <i class="ti ti-settings"></i>
+      Configurações
+    </div>
     <div class="nav-item" onclick="showPage('dashboard')">
       <i class="ti ti-lock"></i>
       Controle de Acesso
@@ -1496,6 +1501,59 @@
     </div>
   </div>
 
+  <!-- PAGE: CONFIGURAÇÕES — permite ao usuário trocar senha e foto de perfil -->
+  <div class="page" id="page-configuracoes" style="display:none">
+    <div class="card" style="max-width:520px">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-settings"></i> Configurações da Conta</div>
+      </div>
+      <div style="padding:24px;display:flex;flex-direction:column;gap:28px">
+
+        <!-- SEÇÃO: Foto de perfil -->
+        <!-- TODO: backend ainda não suporta foto — implementar rota de upload de avatar -->
+        <div>
+          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted)">Foto de Perfil</label>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:12px">
+            <div id="config-avatar" style="width:64px;height:64px;border-radius:50%;background:var(--usga-mid);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:white;flex-shrink:0">--</div>
+            <div>
+              <button class="btn-ghost" style="font-size:13px" onclick="document.getElementById('config-foto-input').click()">
+                <i class="ti ti-upload"></i> Alterar foto
+              </button>
+              <!-- Input oculto — funcionalidade de upload de avatar pendente de backend -->
+              <input type="file" id="config-foto-input" accept="image/*" style="display:none" onchange="previewFotoPerfil(this)">
+              <p style="font-size:11px;color:var(--text-muted);margin-top:6px">JPG ou PNG · máx. 2 MB</p>
+            </div>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border)">
+
+        <!-- SEÇÃO: Trocar senha — chama PUT /api/usuarios/:id com campo senha -->
+        <div>
+          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted)">Trocar Senha</label>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+            <div class="form-group" style="margin:0">
+              <label>Senha atual</label>
+              <input type="password" id="config-senha-atual" placeholder="Digite sua senha atual">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Nova senha</label>
+              <input type="password" id="config-senha-nova" placeholder="Mínimo 6 caracteres">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Confirmar nova senha</label>
+              <input type="password" id="config-senha-confirmar" placeholder="Repita a nova senha">
+            </div>
+            <button class="btn btn-primary" style="align-self:flex-start" onclick="trocarSenha()">
+              <i class="ti ti-lock-check"></i> Salvar nova senha
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <!-- PAGE: AUDITORIA -->
   <div class="page" id="page-auditoria" style="display:none">
     <div class="card">
@@ -1667,6 +1725,62 @@ async function fazerLogin() {
     errEl.style.display = 'block';
     btn.disabled = false;
     btn.innerHTML = 'Entrar no sistema';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  CONFIGURAÇÕES — trocar senha e foto de perfil
+// ═══════════════════════════════════════════════════════
+
+// previewFotoPerfil — mostra preview da imagem selecionada no avatar.
+// TODO: quando o backend tiver suporte a foto, enviar via PUT /usuarios/:id
+function previewFotoPerfil(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { toast('Imagem deve ter no máximo 2 MB', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const avatar = document.getElementById('config-avatar');
+    avatar.style.backgroundImage = `url(${e.target.result})`;
+    avatar.style.backgroundSize = 'cover';
+    avatar.textContent = '';
+  };
+  reader.readAsDataURL(file);
+  toast('Foto atualizada visualmente. Salvar no servidor em breve.', 'info');
+}
+
+// trocarSenha — valida os campos e envia PUT /api/usuarios/:id com o campo senha.
+// O backend (usuarioController.js) aplica bcrypt antes de salvar.
+async function trocarSenha() {
+  const senhaAtual = document.getElementById('config-senha-atual').value;
+  const senhaNova = document.getElementById('config-senha-nova').value;
+  const senhaConfirmar = document.getElementById('config-senha-confirmar').value;
+
+  if (!senhaAtual || !senhaNova || !senhaConfirmar) {
+    toast('Preencha todos os campos de senha.', 'error'); return;
+  }
+  if (senhaNova.length < 6) {
+    toast('A nova senha deve ter no mínimo 6 caracteres.', 'error'); return;
+  }
+  if (senhaNova !== senhaConfirmar) {
+    toast('As senhas não coincidem.', 'error'); return;
+  }
+
+  try {
+    // envia apenas o campo senha — o backend valida e aplica o hash
+    await api('PUT', '/usuarios/' + state.usuario.id, {
+      nome: state.usuario.nome,
+      email: state.usuario.email,
+      cargo_id: state.usuario.cargo_id,
+      departamento_id: state.usuario.departamento_id,
+      senha: senhaNova
+    });
+    toast('Senha alterada com sucesso!');
+    ['config-senha-atual','config-senha-nova','config-senha-confirmar'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+  } catch (err) {
+    toast('Erro ao trocar senha: ' + err.message, 'error');
   }
 }
 
@@ -2083,7 +2197,16 @@ async function atualizarStats() {
 //  NAVEGAÇÃO
 // ═══════════════════════════════════════════════════════
 function showPage(name) {
-  ['dashboard','nova','auditoria'].forEach(p => {
+  // Ao abrir configurações, preenche o avatar com as iniciais do usuário logado
+  if (name === 'configuracoes' && state.usuario) {
+    const iniciais = (state.usuario.nome || '').split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('config-avatar').textContent = iniciais || '--';
+    // limpa campos de senha ao abrir a tela
+    ['config-senha-atual','config-senha-nova','config-senha-confirmar'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+  }
+  ['dashboard','nova','auditoria','configuracoes'].forEach(p => {
     var el = document.getElementById('page-'+p);
     if(el) el.style.display = (p === name) ? '' : 'none';
   });
@@ -2092,6 +2215,7 @@ function showPage(name) {
     nova: 'Nova C.I <span>/ Redigir Comunicação</span>',
     auditoria: 'Auditoria <span>/ Histórico do Sistema</span>',
     cis: 'Minhas C.I <span>/ Caixa de Entrada</span>',
+    configuracoes: 'Configurações <span>/ Minha Conta</span>',
   };
   document.getElementById('page-title').innerHTML = titles[name] || 'C.I Digital';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
