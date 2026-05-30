@@ -3,6 +3,7 @@ import * as notificacaoModel from '../models/notificacaoModel.js';
 import * as destinatarioModel from '../models/destinatarioModel.js';
 import * as anexoModel from '../models/anexoModel.js';
 import { ValidationError, NotFoundError, DatabaseError } from '../utils/appError.js';
+import { registrarLog, getClientIP } from '../middlewares/auditMiddleware.js';
 
 export const criarCI = async (req, res, next) => {
   try {
@@ -38,6 +39,8 @@ export const criarCI = async (req, res, next) => {
         );
         }
     }
+
+    await registrarLog(usuario_id, `CI_CRIADA estado=${estadoFinal}`, getClientIP(req), resultado.insertId);
 
     res.status(201).json({
       sucesso: true,
@@ -208,6 +211,7 @@ export const arquivarComunicacao = async (req, res, next) =>{
                 'ERRO_ARQUIVAR_CI'
             );
         }
+        await registrarLog(req.usuario.id, 'CI_ARQUIVADA', getClientIP(req), parseInt(id));
         res.status(200).json({
                 sucesso: true,
                 mensagem: 'Comunicação arquivada com sucesso',

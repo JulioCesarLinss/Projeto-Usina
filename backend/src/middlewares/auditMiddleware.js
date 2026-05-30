@@ -10,17 +10,19 @@ export const getClientIP = (req) => {
   );
 };
 
-// Grava uma linha no banco com o que aconteceu, quando, quem fez e de onde
-export const registrarLog = async (usuarioId, acao, ip) => {
+// Grava uma linha no banco com o que aconteceu, quando, quem fez e de onde.
+// comunicacao_id é opcional — ações como login/logout não têm CI associada.
+export const registrarLog = async (usuarioId, acao, ip, comunicacao_id = null) => {
   try {
     const sql = `
-      INSERT INTO logs_sistema (acao_realizada, data_hora, usuario_id, ip_usuario)
-      VALUES (?, NOW(), ?, ?)
+      INSERT INTO logs_sistema (acao_realizada, data_hora, usuario_id, ip_usuario, comunicacao_id)
+      VALUES (?, NOW(), ?, ?, ?)
     `;
     await pool.query(sql, [
       acao.substring(0, 150),
       usuarioId,
-      ip.substring(0, 45)
+      ip.substring(0, 45),
+      comunicacao_id
     ]);
   } catch (err) {
     // Se o log falhar a aplicação continua normalmente

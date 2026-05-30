@@ -1,6 +1,7 @@
 import * as confirmacaoModel from '../models/confirmacaoLeituraModel.js';
 import * as comunicacaoModel from '../models/comunicacaoModel.js';
 import { ValidationError, NotFoundError, ConflictError, DatabaseError } from '../utils/appError.js';
+import { registrarLog, getClientIP } from '../middlewares/auditMiddleware.js';
 
 export const confirmarLeitura = async (req, res, next) => {
   try {
@@ -39,6 +40,8 @@ export const confirmarLeitura = async (req, res, next) => {
     } catch (err) {
       throw new DatabaseError('Erro ao confirmar leitura', 'ERRO_CONFIRMAR_LEITURA');
     }
+
+    await registrarLog(usuario_id, 'CI_LEITURA_CONFIRMADA', getClientIP(req), parseInt(id));
 
     res.status(201).json({
       sucesso: true,
