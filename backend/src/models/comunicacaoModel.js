@@ -36,3 +36,57 @@ export const arquivarCI = async (id) => {
   const [result] = await pool.query(sql, [id]);
   return result;
 };
+
+// buscarCIs — listagem de CIs com filtros opcionais: texto livre, estado, intervalo de datas e departamento.
+// Usado quando o usuário aplica filtros ou digita na barra de pesquisa.
+// tipo 'recebidas' filtra por departamento_id, tipo 'enviadas' filtra por usuario_id, tipo 'todas' sem restrição.
+export const buscarCIs = async ({
+  tipo = 'recebidas',
+  departamento_id,
+  usuario_id,
+  verTodos = false,
+  busca,
+  estado,
+  data_inicio,
+  data_fim,
+  pagina = 1,
+  limite = 20
+}) => {
+  const offset = (pagina - 1) * limite;
+  const conditions = [];
+  const params = [];
+
+  if (tipo === 'enviadas') {
+    conditions.push('usuario_id = ?');
+    params.push(usuario_id);
+  } else if (tipo === 'recebidas' && !verTodos) {
+    conditions.push('departamento_id = ?');
+    params.push(departamento_id);
+  }
+
+  if (busca) {
+    conditions.push('(titulo LIKE ? OR descricao LIKE ?)');
+    params.push(`%${busca}%`, `%${busca}%`);
+  }
+
+  if (estado) {
+    conditions.push('estado = ?');
+    params.push(estado);
+  }
+
+  if (data_inicio) {
+    conditions.push('data_hora >= ?');
+    params.push(data_inicio);
+  }
+  if (data_fim) {
+    conditions.push('data_hora <= ?');
+    params.push(data_fim + ' 23:59:59');
+  }
+
+  const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+  const sql = `SELECT * FROM comunicacao ${where} ORDER BY data_hora DESC LIMIT ? OFFSET ?`;
+  params.push(limite, offset);
+
+  const [results] = await pool.query(sql, params);
+  return results;
+};

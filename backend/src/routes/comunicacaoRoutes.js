@@ -7,6 +7,8 @@ const router = express.Router();
 router.post('/criar', verificarToken, comunicacaoController.criarCI);
 router.get('/recebidas', verificarToken, comunicacaoController.listarComunicacaoRecebidas);
 router.get('/enviadas', verificarToken, comunicacaoController.listarComunicacaoEnviadas);
+// rota de busca com filtros — deve vir antes de /:id para não ser interceptada
+router.get('/buscar', verificarToken, comunicacaoController.buscarCIsComFiltros);
 router.post('/:id/arquivar', verificarToken, comunicacaoController.arquivarComunicacao);
 router.get('/:id/anexos', verificarToken, comunicacaoController.listarAnexosCI);
 router.get('/:id', verificarToken, comunicacaoController.buscarCIporID);

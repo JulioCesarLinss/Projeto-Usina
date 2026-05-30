@@ -218,6 +218,36 @@ export const arquivarComunicacao = async (req, res, next) =>{
     }
 };
 
+// buscarCIsComFiltros — recebe parâmetros via query string e repassa ao model buscarCIs.
+// Respeita o nível do usuário: gerente/master veem tudo, demais só o próprio departamento.
+export const buscarCIsComFiltros = async (req, res, next) => {
+    try {
+        const { busca, estado, data_inicio, data_fim, tipo, pagina, limite } = req.query;
+        const verTodos = req.usuario.cargo_id <= 2;
+
+        const resultado = await comunicacaoModel.buscarCIs({
+            tipo: tipo || 'recebidas',
+            departamento_id: req.usuario.departamento_id,
+            usuario_id: req.usuario.id,
+            verTodos,
+            busca,
+            estado,
+            data_inicio,
+            data_fim,
+            pagina: parseInt(pagina) || 1,
+            limite: parseInt(limite) || 20
+        });
+
+        res.status(200).json({
+            sucesso: true,
+            dados: resultado,
+            paginacao: { pagina: parseInt(pagina) || 1, limite: parseInt(limite) || 20, total: resultado.length }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 export const listarAnexosCI = async (req, res, next) => {
     try {
         const { id } = req.params;
