@@ -2,12 +2,14 @@ import multer from 'multer';
 import path from 'path';
 import { AppError } from '../utils/appError.js';
 
-const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 const MAX_FILENAME_LENGTH = 120;
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/png'
 ];
 const FORBIDDEN_EXTENSIONS = ['.exe'];
 

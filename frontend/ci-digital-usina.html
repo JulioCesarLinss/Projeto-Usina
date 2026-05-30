@@ -1552,6 +1552,12 @@
         <p id="modal-subject" style="font-size:16px;font-weight:600;margin-top:4px"></p>
       </div>
       <div class="ci-body-text" id="modal-body-text"></div>
+      <!-- Seção de anexos: só aparece se a CI tiver arquivos vinculados -->
+      <div id="modal-anexos" style="display:none;margin-top:16px">
+        <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted)">Anexos</label>
+        <!-- Lista preenchida dinamicamente pelo JS ao abrir a CI -->
+        <div id="modal-anexos-lista" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
+      </div>
       <div class="read-indicator" id="modal-read-indicator">
         <i class="ti ti-eye-check"></i>
         Você está visualizando esta C.I agora — confirmação de leitura será registrada no sistema.
@@ -1802,6 +1808,34 @@ async function abrirCIDoBackend(id) {
     document.getElementById('modal-subject').textContent = ci.titulo;
     document.getElementById('modal-body-text').textContent = ci.descricao;
     document.getElementById('btn-arquivar').style.display = ci.estado === 'arquivada' ? 'none' : '';
+
+    // Busca os anexos da CI no backend e renderiza cada um como link de download
+    try {
+      const anexosData = await api('GET', '/comunicacoes/' + id + '/anexos'); // rota criada em comunicacaoRoutes.js
+      const anexos = anexosData.dados;
+      const secao = document.getElementById('modal-anexos'); // container da seção de anexos
+      const lista = document.getElementById('modal-anexos-lista'); // onde os links são inseridos
+      lista.innerHTML = '';
+      if (anexos && anexos.length > 0) {
+        secao.style.display = ''; // exibe a seção só se houver anexos
+        anexos.forEach(a => {
+          const tamanhoKB = a.tamanho ? (parseInt(a.tamanho) / 1024).toFixed(1) + ' KB' : '';
+          // cada anexo vira um link clicável que dispara o download direto do servidor
+          lista.innerHTML += `
+            <a href="http://localhost:3000${a.caminho}" target="_blank" download="${a.nome}"
+               style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--usga-xpale);border:1px solid var(--border);border-radius:var(--radius);text-decoration:none;color:var(--text-primary)">
+              <i class="ti ti-paperclip" style="color:var(--usga-mid);font-size:16px"></i>
+              <span style="flex:1;font-size:13px;font-weight:500">${a.nome}</span>
+              ${tamanhoKB ? `<span style="font-size:11px;color:var(--text-muted)">${tamanhoKB}</span>` : ''}
+              <i class="ti ti-download" style="color:var(--usga-mid);font-size:15px"></i>
+            </a>`;
+        });
+      } else {
+        secao.style.display = 'none'; // oculta se não houver anexos
+      }
+    } catch (e) {
+      document.getElementById('modal-anexos').style.display = 'none'; // oculta em caso de erro
+    }
     const btnLer = document.getElementById('btn-confirmar-leitura');
     btnLer.disabled = false;
     btnLer.innerHTML = '<i class="ti ti-check"></i> Confirmar Leitura';

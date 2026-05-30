@@ -1,5 +1,7 @@
 import dotenv from 'dotenv';
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import cors from 'cors';
 import pool from './src/config/db.js';
 import usuarioRoutes from './src/routes/usuarioRoutes.js';
@@ -92,6 +94,10 @@ app.get('/api/health/completo', asyncHandler(async (req, res) => {
     });
   }
 }));
+
+// ==================== ARQUIVOS ESTÁTICOS ====================
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ==================== ROTAS DA APLICAÇÃO ====================
 app.use('/api/usuarios', usuarioRoutes);

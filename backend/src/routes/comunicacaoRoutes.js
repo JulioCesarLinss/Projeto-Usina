@@ -8,6 +8,7 @@ router.post('/criar', verificarToken, comunicacaoController.criarCI);
 router.get('/recebidas', verificarToken, comunicacaoController.listarComunicacaoRecebidas);
 router.get('/enviadas', verificarToken, comunicacaoController.listarComunicacaoEnviadas);
 router.post('/:id/arquivar', verificarToken, comunicacaoController.arquivarComunicacao);
+router.get('/:id/anexos', verificarToken, comunicacaoController.listarAnexosCI);
 router.get('/:id', verificarToken, comunicacaoController.buscarCIporID);
 
 export default router;

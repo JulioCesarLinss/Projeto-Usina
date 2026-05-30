@@ -1,11 +1,11 @@
 import * as comunicacaoModel from '../models/comunicacaoModel.js';
 import * as notificacaoModel from '../models/notificacaoModel.js';
 import * as destinatarioModel from '../models/destinatarioModel.js';
+import * as anexoModel from '../models/anexoModel.js';
 import { ValidationError, NotFoundError, DatabaseError } from '../utils/appError.js';
 
 export const criarCI = async (req, res, next) => {
   try {
-    const { titulo, estado, descricao, departamento_id } = req.body;
     const { titulo, estado, descricao, departamento_id, destinatarios } = req.body;
     const usuario_id = req.usuario.id;
     const data_hora = new Date();
@@ -210,6 +210,19 @@ export const arquivarComunicacao = async (req, res, next) =>{
                 dados: {id}
             });
     }catch(err){
+        next(err);
+    }
+};
+
+export const listarAnexosCI = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        if (!id || isNaN(id)) {
+            throw new ValidationError('ID inválido', 'ID_INVALIDO', [{ mensagem: 'ID deve ser um número' }]);
+        }
+        const anexos = await anexoModel.listarAnexosPorCI(id);
+        res.status(200).json({ sucesso: true, dados: anexos });
+    } catch (err) {
         next(err);
     }
 };

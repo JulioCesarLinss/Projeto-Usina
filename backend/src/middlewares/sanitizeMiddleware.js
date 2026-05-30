@@ -63,6 +63,7 @@ export const sanitizeInputs = (req, res, next) => {
 export const validateContentType = (req, res, next) => {
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
     const contentType = req.headers['content-type'] || '';
+    if (contentType.includes('multipart/form-data')) return next();
     if (!contentType.includes('application/json')) {
       return res.status(415).json({
         sucesso: false,
