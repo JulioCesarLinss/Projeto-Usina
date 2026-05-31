@@ -726,6 +726,7 @@ function showPage(name) {
   if (name === 'auditoria') carregarAuditoria(1);
   if (name === 'visaogeral') carregarVisaoGeral();
   if (name === 'controle') carregarControleAcesso();
+  if (name === 'relatorios') carregarRelatorios();
   if (name === 'nova') { cancelarEdicaoRascunho(); carregarRascunhos(); }
   if (name === 'configuracoes' && state.usuario) {
     const u = state.usuario;
@@ -741,7 +742,7 @@ function showPage(name) {
       document.getElementById(id).value = '';
     });
   }
-  ['dashboard','nova','auditoria','configuracoes','visaogeral','controle'].forEach(p => {
+  ['dashboard','nova','auditoria','configuracoes','visaogeral','controle','relatorios'].forEach(p => {
     var el = document.getElementById('page-'+p);
     if(el) el.style.display = (p === name) ? '' : 'none';
   });
@@ -753,6 +754,7 @@ function showPage(name) {
     cis: 'Minhas C.I <span>/ Caixa de Entrada</span>',
     configuracoes: 'Configurações <span>/ Minha Conta</span>',
     controle: 'Controle de Acesso <span>/ Usuários do Sistema</span>',
+    relatorios: 'Relatórios <span>/ Análise de Comunicações</span>',
   };
   document.getElementById('page-title').innerHTML = titles[name] || 'C.I Digital';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -1270,6 +1272,146 @@ async function criarUsuarioCA() {
     btn.disabled = false;
     btn.innerHTML = original;
   }
+}
+
+// ═══════════════════════════════════════════════════════
+//  RELATÓRIOS
+// ═══════════════════════════════════════════════════════
+let relPeriodo = 30;
+const relCharts = {};
+
+// Desativa todas as animações do Chart.js globalmente
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.animation = false;
+  Chart.defaults.transitions.active.animation.duration = 0;
+  Chart.defaults.transitions.resize.animation.duration = 0;
+}
+
+function selecionarPeriodoRel(dias, el) {
+  relPeriodo = dias;
+  document.querySelectorAll('.rel-periodo-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  carregarRelatorios();
+}
+
+async function carregarRelatorios() {
+  try {
+    const [resumoData, deptoData, evolData] = await Promise.all([
+      api('GET', `/relatorios/resumo?periodo=${relPeriodo}`),
+      api('GET', `/relatorios/por-departamento?periodo=${relPeriodo}`),
+      api('GET', '/relatorios/evolucao-mensal')
+    ]);
+    renderizarResumo(resumoData.dados);
+    renderizarGraficoPorDepto(deptoData.dados);
+    renderizarGraficoTaxaLeitura(deptoData.dados);
+    renderizarGraficoEvolucao(evolData.dados);
+  } catch (err) {
+    toast('Erro ao carregar relatórios: ' + err.message, 'error');
+  }
+}
+
+function renderizarResumo(d) {
+  document.getElementById('rel-total').textContent     = d.total_cis;
+  document.getElementById('rel-taxa').textContent      = d.taxa_leitura + '%';
+  document.getElementById('rel-pendentes').textContent = d.total_pendentes;
+  document.getElementById('rel-media').textContent     = d.media_por_dia;
+}
+
+function criarOuAtualizarChart(id, tipo, dados, opcoes) {
+  if (relCharts[id]) relCharts[id].destroy();
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx) return;
+  relCharts[id] = new Chart(ctx, { type: tipo, data: dados, options: opcoes });
+}
+
+function corDark() {
+  return document.body.classList.contains('dark');
+}
+
+function hexRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function corDepto(id) {
+  const idx = state.departamentos.findIndex(d => d.id === parseInt(id));
+  return VG_CORES[idx >= 0 ? idx % VG_CORES.length : 0];
+}
+
+function labelMultilinha(texto) {
+  const palavras = texto.split(' ');
+  if (palavras.length <= 1) return texto;
+  const meio = Math.ceil(palavras.length / 2);
+  return [palavras.slice(0, meio).join(' '), palavras.slice(meio).join(' ')];
+}
+
+function renderizarGraficoPorDepto(depts) {
+  const dark = corDark();
+  const labels = depts.map(d => labelMultilinha(NOMES_DEPT[d.nome.toUpperCase()] || d.nome));
+  criarOuAtualizarChart('chart-por-depto', 'bar', {
+    labels,
+    datasets: [
+      { label: 'Enviadas',  data: depts.map(d => d.enviadas),  backgroundColor: '#43931F', borderRadius: 4 },
+      { label: 'Recebidas', data: depts.map(d => d.recebidas), backgroundColor: '#7AB260', borderRadius: 4 }
+    ]
+  }, {
+    responsive: false,
+    plugins: { legend: { labels: { color: dark ? '#9AB882' : '#3D5C2A', font: { family: 'DM Sans' } } } },
+    scales: {
+      x: { ticks: { color: dark ? '#9AB882' : '#6B8C58', maxRotation: 0, minRotation: 0 }, grid: { color: dark ? '#1E2E14' : '#E8F2E0' } },
+      y: { ticks: { color: dark ? '#9AB882' : '#6B8C58', stepSize: 1 }, grid: { color: dark ? '#1E2E14' : '#E8F2E0' }, beginAtZero: true }
+    }
+  });
+}
+
+function renderizarGraficoTaxaLeitura(depts) {
+  const dark = corDark();
+  const labels = depts.map(d => labelMultilinha(NOMES_DEPT[d.nome.toUpperCase()] || d.nome));
+  criarOuAtualizarChart('chart-taxa-leitura', 'bar', {
+    labels,
+    datasets: [
+      { label: 'Lidas',     data: depts.map(d => d.lidas),    backgroundColor: '#43931F', borderRadius: 4 },
+      { label: 'Pendentes', data: depts.map(d => d.pendentes), backgroundColor: '#F0C050', borderRadius: 4 }
+    ]
+  }, {
+    responsive: false,
+    plugins: { legend: { labels: { color: dark ? '#9AB882' : '#3D5C2A', font: { family: 'DM Sans' } } } },
+    scales: {
+      x: { stacked: true, ticks: { color: dark ? '#9AB882' : '#6B8C58', maxRotation: 0, minRotation: 0 }, grid: { color: dark ? '#1E2E14' : '#E8F2E0' } },
+      y: { stacked: true, ticks: { color: dark ? '#9AB882' : '#6B8C58', stepSize: 1 }, grid: { color: dark ? '#1E2E14' : '#E8F2E0' }, beginAtZero: true }
+    }
+  });
+}
+
+function renderizarGraficoEvolucao(dados) {
+  const dark = corDark();
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const labels = dados.map(d => {
+    const [ano, mes] = d.mes.split('-');
+    return `${MESES[parseInt(mes) - 1]}/${ano.slice(2)}`;
+  });
+  criarOuAtualizarChart('chart-evolucao', 'line', {
+    labels,
+    datasets: [{
+      label: 'C.I Enviadas',
+      data: dados.map(d => d.total),
+      borderColor: '#43931F',
+      backgroundColor: 'rgba(67,147,31,0.08)',
+      tension: 0.4,
+      fill: true,
+      pointBackgroundColor: '#43931F',
+      pointRadius: 4
+    }]
+  }, {
+    responsive: false,
+    plugins: { legend: { labels: { color: dark ? '#9AB882' : '#3D5C2A', font: { family: 'DM Sans' } } } },
+    scales: {
+      x: { ticks: { color: dark ? '#9AB882' : '#6B8C58' }, grid: { color: dark ? '#1E2E14' : '#E8F2E0' } },
+      y: { ticks: { color: dark ? '#9AB882' : '#6B8C58', stepSize: 1 }, grid: { color: dark ? '#1E2E14' : '#E8F2E0' }, beginAtZero: true }
+    }
+  });
 }
 
 // ═══════════════════════════════════════════════════════

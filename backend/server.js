@@ -12,6 +12,7 @@ import notificacaoRoutes from './src/routes/notificacaoRoutes.js';
 import destinatarioRoutes from './src/routes/destinatarioRoutes.js';
 import uploadRoutes from './src/routes/uploadRoutes.js';
 import auditoriaRoutes from './src/routes/auditoriaRoutes.js';
+import relatorioRoutes from './src/routes/relatorioRoutes.js';
 import { handleError, asyncHandler } from './src/middlewares/errorMiddleware.js';
 import { securityHeaders } from './src/middlewares/securityHeadersMiddleware.js';
 import { rateLimiter } from './src/middlewares/rateLimitMiddleware.js';
@@ -109,6 +110,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/destinatarios', destinatarioRoutes);
 app.use('/api/departamentos', departamentoRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
+app.use('/api/relatorios', relatorioRoutes);
 
 // ==================== ROTA NÃO ENCONTRADA ====================
 app.use((req, res) => {
