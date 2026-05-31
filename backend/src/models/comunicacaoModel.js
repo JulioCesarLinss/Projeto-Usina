@@ -17,43 +17,148 @@ export const buscarCIporID = async (id) => {
   return results[0];
 };
 
-export const contarCIRecebidas = async (departamento_id, usuario_id, verTodos = false) => {
-  const sql = verTodos
-    ? 'SELECT COUNT(*) AS total FROM comunicacao WHERE usuario_id != ?'
-    : 'SELECT COUNT(*) AS total FROM comunicacao WHERE departamento_id = ? AND usuario_id != ?';
+export const contarCIRecebidas = async (departamento_id, usuario_id, verTodos = false, filtro_departamento_id = null) => {
+  if (filtro_departamento_id) {
+    // filtro por dept: não lidas de qualquer data + lidas de hoje
+    const sql = `SELECT COUNT(*) AS total FROM comunicacao c
+       LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
+       WHERE c.departamento_id = ? AND c.usuario_id != ? AND c.estado = 'enviada'
+         AND (cl.id IS NULL OR DATE(cl.data_hora) = CURDATE())`;
+    const [results] = await pool.query(sql, [usuario_id, filtro_departamento_id, usuario_id]);
+    return results[0].total;
+  }
+  const base = verTodos
+    ? `SELECT COUNT(*) AS total FROM comunicacao c
+       WHERE c.usuario_id != ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE()`
+    : `SELECT COUNT(*) AS total FROM comunicacao c
+       WHERE c.departamento_id = ? AND c.usuario_id != ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE()`;
   const params = verTodos ? [usuario_id] : [departamento_id, usuario_id];
-  const [results] = await pool.query(sql, params);
+  const [results] = await pool.query(base, params);
   return results[0].total;
 };
 
-export const listarCIRecebidas = async (departamento_id, usuario_id, pagina = 1, limite = 20, verTodos = false) => {
+export const listarCIRecebidas = async (departamento_id, usuario_id, pagina = 1, limite = 20, verTodos = false, filtro_departamento_id = null) => {
   const offset = (pagina - 1) * limite;
-  // exclui CIs criadas pelo próprio usuário — essas ficam só na aba "enviadas"
-  // verTodos = true para gerente e master (veem todos os departamentos)
-  const sql = verTodos
-    ? 'SELECT * FROM comunicacao WHERE usuario_id != ? LIMIT ? OFFSET ?'
-    : 'SELECT * FROM comunicacao WHERE departamento_id = ? AND usuario_id != ? LIMIT ? OFFSET ?';
-  const params = verTodos ? [usuario_id, limite, offset] : [departamento_id, usuario_id, limite, offset];
+  if (filtro_departamento_id) {
+    // filtro por dept: não lidas de qualquer data + lidas de hoje
+    const sql = `SELECT c.*, CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS lida
+       FROM comunicacao c
+       LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
+       WHERE c.departamento_id = ? AND c.usuario_id != ? AND c.estado = 'enviada'
+         AND (cl.id IS NULL OR DATE(cl.data_hora) = CURDATE())
+       ORDER BY cl.id IS NOT NULL, c.data_hora DESC LIMIT ? OFFSET ?`;
+    const [results] = await pool.query(sql, [usuario_id, filtro_departamento_id, usuario_id, limite, offset]);
+    return results;
+  }
+  const base = verTodos
+    ? `SELECT c.*, CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS lida
+       FROM comunicacao c
+       LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
+       WHERE c.usuario_id != ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE()
+       ORDER BY cl.id IS NOT NULL, c.data_hora DESC LIMIT ? OFFSET ?`
+    : `SELECT c.*, CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS lida
+       FROM comunicacao c
+       LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
+       WHERE c.departamento_id = ? AND c.usuario_id != ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE()
+       ORDER BY cl.id IS NOT NULL, c.data_hora DESC LIMIT ? OFFSET ?`;
+  const params = verTodos
+    ? [usuario_id, usuario_id, limite, offset]
+    : [usuario_id, departamento_id, usuario_id, limite, offset];
+  const [results] = await pool.query(base, params);
+  return results;
+};
+
+export const contarCIEnviadas = async (usuario_id, filtro_departamento_id = null) => {
+  const deptCond = filtro_departamento_id ? ' AND departamento_id = ?' : '';
+  const params = filtro_departamento_id ? [usuario_id, filtro_departamento_id] : [usuario_id];
+  const [results] = await pool.query(
+    `SELECT COUNT(*) AS total FROM comunicacao WHERE usuario_id = ? AND estado = 'enviada' AND DATE(data_hora) = CURDATE()${deptCond}`,
+    params
+  );
+  return results[0].total;
+};
+
+export const listarCIEnviadas = async (usuario_id, pagina = 1, limite = 20, filtro_departamento_id = null) => {
+  const offset = (pagina - 1) * limite;
+  const deptCond = filtro_departamento_id ? 'AND c.departamento_id = ?' : '';
+  const params = filtro_departamento_id
+    ? [usuario_id, filtro_departamento_id, limite, offset]
+    : [usuario_id, limite, offset];
+  const sql = `
+    SELECT c.*,
+      (SELECT COUNT(*) FROM confirmacao_leitura cl WHERE cl.comunicacao_id = c.id) AS total_lidas
+    FROM comunicacao c
+    WHERE c.usuario_id = ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE() ${deptCond}
+    ORDER BY c.data_hora DESC LIMIT ? OFFSET ?`;
   const [results] = await pool.query(sql, params);
   return results;
 };
 
-export const contarCIEnviadas = async (usuario_id) => {
-  const [results] = await pool.query('SELECT COUNT(*) AS total FROM comunicacao WHERE usuario_id = ?', [usuario_id]);
-  return results[0].total;
+export const listarRascunhos = async (usuario_id) => {
+  const sql = "SELECT * FROM comunicacao WHERE usuario_id = ? AND estado = 'rascunho' ORDER BY data_hora DESC";
+  const [results] = await pool.query(sql, [usuario_id]);
+  return results;
 };
 
-export const listarCIEnviadas = async (usuario_id, pagina = 1, limite = 20) => {
-  const offset = (pagina - 1) * limite;
-  const sql = 'SELECT * FROM comunicacao WHERE usuario_id = ? LIMIT ? OFFSET ?';
-  const [results] = await pool.query(sql, [usuario_id, limite, offset]);
-  return results;
+export const atualizarCI = async (id, titulo, descricao, departamento_id, estado) => {
+  const sql = 'UPDATE comunicacao SET titulo = ?, descricao = ?, departamento_id = ?, estado = ?, data_hora = NOW() WHERE id = ?';
+  const [result] = await pool.query(sql, [titulo, descricao, departamento_id, estado, id]);
+  return result;
 };
 
 export const arquivarCI = async (id) => {
   const sql = "UPDATE comunicacao SET estado = 'arquivada' WHERE id = ?";
   const [result] = await pool.query(sql, [id]);
   return result;
+};
+
+// listarMinhasCIs — histórico completo: todas as CIs enviadas ou recebidas pelo usuário
+export const listarMinhasCIs = async (usuario_id, departamento_id, pagina = 1, limite = 20, filtro_departamento_id = null) => {
+  const offset = (pagina - 1) * limite;
+  if (filtro_departamento_id) {
+    // filtro por dept: próprias CIs nesse dept (qualquer estado) + enviadas de outros nesse dept
+    const sql = `
+      SELECT DISTINCT c.*,
+        CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS lida,
+        (SELECT COUNT(*) FROM confirmacao_leitura cl2 WHERE cl2.comunicacao_id = c.id) AS total_lidas
+      FROM comunicacao c
+      LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
+      WHERE c.departamento_id = ? AND (c.usuario_id = ? OR c.estado = 'enviada')
+      ORDER BY c.data_hora DESC LIMIT ? OFFSET ?`;
+    const [results] = await pool.query(sql, [usuario_id, filtro_departamento_id, usuario_id, limite, offset]);
+    return results;
+  }
+  const sql = `
+    SELECT DISTINCT c.*,
+      CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS lida,
+      (SELECT COUNT(*) FROM confirmacao_leitura cl2 WHERE cl2.comunicacao_id = c.id) AS total_lidas
+    FROM comunicacao c
+    LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
+    WHERE c.usuario_id = ?
+       OR (c.estado = 'enviada' AND (
+         c.departamento_id = ?
+         OR EXISTS (SELECT 1 FROM confirmacao_leitura cr WHERE cr.comunicacao_id = c.id AND cr.usuario_id = ?)
+       ))
+    ORDER BY c.data_hora DESC LIMIT ? OFFSET ?`;
+  const [results] = await pool.query(sql, [usuario_id, usuario_id, departamento_id, usuario_id, limite, offset]);
+  return results;
+};
+
+export const contarMinhasCIs = async (usuario_id, departamento_id, filtro_departamento_id = null) => {
+  if (filtro_departamento_id) {
+    const sql = `SELECT COUNT(DISTINCT c.id) AS total FROM comunicacao c
+                 WHERE c.departamento_id = ? AND (c.usuario_id = ? OR c.estado = 'enviada')`;
+    const [results] = await pool.query(sql, [filtro_departamento_id, usuario_id]);
+    return results[0].total;
+  }
+  const sql = `SELECT COUNT(DISTINCT c.id) AS total FROM comunicacao c
+               WHERE c.usuario_id = ?
+                  OR (c.estado = 'enviada' AND (
+                    c.departamento_id = ?
+                    OR EXISTS (SELECT 1 FROM confirmacao_leitura cr WHERE cr.comunicacao_id = c.id AND cr.usuario_id = ?)
+                  ))`;
+  const [results] = await pool.query(sql, [usuario_id, departamento_id, usuario_id]);
+  return results[0].total;
 };
 
 // buscarCIs — listagem de CIs com filtros opcionais: texto livre, estado, intervalo de datas e departamento.

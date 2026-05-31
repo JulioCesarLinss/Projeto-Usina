@@ -31,6 +31,25 @@ export const registrarLog = async (usuarioId, acao, ip, comunicacao_id = null) =
   }
 };
 
+// Converte rota HTTP em mensagem legível para o admin
+const traduzirAcao = (method, path, statusCode) => {
+  if (statusCode === 401) return 'Acesso negado — token inválido';
+  if (statusCode === 403) return 'Acesso negado — sem permissão';
+  if (statusCode === 429) return 'Bloqueado por excesso de tentativas';
+  if (method === 'POST' && path.includes('/login'))      return 'Login realizado';
+  if (method === 'POST' && path.includes('/logout'))     return 'Logout realizado';
+  if (method === 'POST' && path.includes('/cadastro'))   return 'Usuário cadastrado';
+  if (method === 'POST' && path.includes('/criar'))      return 'CI criada';
+  if (method === 'POST' && path.includes('/arquivar'))   return 'CI arquivada';
+  if (method === 'POST' && path.includes('/confirmar'))  return 'Leitura de CI confirmada';
+  if (method === 'POST' && path.includes('/upload'))     return 'Arquivo anexado';
+  if (method === 'PUT'  && path.includes('/usuarios'))   return 'Dados de usuário atualizados';
+  if (method === 'DELETE' && path.includes('/usuarios')) return 'Usuário inativado';
+  if (method === 'PATCH' && path.includes('/todas-lidas')) return 'Notificações marcadas como lidas';
+  if (method === 'PATCH' && path.includes('/lida'))      return 'Notificação marcada como lida';
+  return `${method} ${path}`;
+};
+
 // Monitora todas as requisições automaticamente
 export const auditMiddleware = (req, res, next) => {
   const ip = getClientIP(req);
@@ -60,7 +79,7 @@ export const auditMiddleware = (req, res, next) => {
     }
 
     if (usuarioId) {
-      const acao = `${req.method} ${req.path} | status=${statusCode}`;
+      const acao = traduzirAcao(req.method, req.path, statusCode);
       await registrarLog(usuarioId, acao, ip);
     }
   });

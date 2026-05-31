@@ -114,12 +114,13 @@ export const listarComunicacaoRecebidas = async (req,res,next) =>{
 
         // gerente (2) e master (1) veem CIs de todos os departamentos
         const verTodos = req.usuario.cargo_id <= 2;
+        const filtro_departamento_id = req.query.departamento_filtro ? parseInt(req.query.departamento_filtro) : null;
 
         let comunicacao, total;
         try{
             [comunicacao, total] = await Promise.all([
-                comunicacaoModel.listarCIRecebidas(departamento_id, req.usuario.id, pagina, limite, verTodos),
-                comunicacaoModel.contarCIRecebidas(departamento_id, req.usuario.id, verTodos)
+                comunicacaoModel.listarCIRecebidas(departamento_id, req.usuario.id, pagina, limite, verTodos, filtro_departamento_id),
+                comunicacaoModel.contarCIRecebidas(departamento_id, req.usuario.id, verTodos, filtro_departamento_id)
             ]);
         }catch(err){
             throw new DatabaseError(
@@ -152,11 +153,12 @@ export const listarComunicacaoEnviadas = async (req,res,next) =>{
             );
         }
 
+        const filtro_departamento_id = req.query.departamento_filtro ? parseInt(req.query.departamento_filtro) : null;
         let comunicacao, total;
         try{
             [comunicacao, total] = await Promise.all([
-                comunicacaoModel.listarCIEnviadas(usuario_id, pagina, limite),
-                comunicacaoModel.contarCIEnviadas(usuario_id)
+                comunicacaoModel.listarCIEnviadas(usuario_id, pagina, limite, filtro_departamento_id),
+                comunicacaoModel.contarCIEnviadas(usuario_id, filtro_departamento_id)
             ]);
         }catch(err){
             throw new DatabaseError(
@@ -250,6 +252,67 @@ export const buscarCIsComFiltros = async (req, res, next) => {
     } catch (err) {
         next(err);
     }
+};
+
+// listarRascunhos — retorna os rascunhos do usuário logado para exibir na página Nova C.I
+export const listarRascunhos = async (req, res, next) => {
+  try {
+    const rascunhos = await comunicacaoModel.listarRascunhos(req.usuario.id);
+    res.status(200).json({ sucesso: true, dados: rascunhos });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// atualizarCI — atualiza um rascunho existente (pode enviar ou manter como rascunho)
+export const atualizarCI = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { titulo, descricao, departamento_id, estado, destinatarios } = req.body;
+
+    if (!id || isNaN(id)) throw new ValidationError('ID inválido', 'ID_INVALIDO', []);
+    if (!titulo || !descricao || !departamento_id) throw new ValidationError('Campos obrigatórios', 'CAMPOS_OBRIGATORIOS', []);
+
+    const estadoFinal = estado || 'rascunho';
+    await comunicacaoModel.atualizarCI(id, titulo, descricao, departamento_id, estadoFinal);
+
+    // se estiver enviando, cria notificações para os destinatários
+    if (estadoFinal === 'enviada') {
+      let listaDestinatarios = destinatarios || [];
+      if (listaDestinatarios.length === 0) {
+        const usuariosDept = await usuarioModel.listarPorDepartamento(departamento_id);
+        listaDestinatarios = usuariosDept.map(u => ({ usuario_id: u.id, departamento_id }));
+      }
+      for (const dest of listaDestinatarios) {
+        if (dest.usuario_id === req.usuario.id) continue;
+        await destinatarioModel.adicionarDestinatario(parseInt(id), dest.usuario_id, dest.departamento_id);
+        await notificacaoModel.criarNotificacao(`Nova C.I recebida: ${titulo}`, dest.usuario_id, parseInt(id));
+      }
+      await registrarLog(req.usuario.id, 'CI_ENVIADA (rascunho)', getClientIP(req), parseInt(id));
+    }
+
+    res.status(200).json({ sucesso: true, mensagem: 'CI atualizada com sucesso', dados: { id, estado: estadoFinal } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// listarMinhasCIs — histórico completo do usuário (enviadas + recebidas + arquivadas)
+export const listarMinhasCIs = async (req, res, next) => {
+  try {
+    const pagina = parseInt(req.query.pagina) || 1;
+    const limite = parseInt(req.query.limite) || 10;
+    const usuario_id = req.usuario.id;
+    const departamento_id = req.usuario.departamento_id;
+    const filtro_departamento_id = req.query.departamento_filtro ? parseInt(req.query.departamento_filtro) : null;
+    const [comunicacoes, total] = await Promise.all([
+      comunicacaoModel.listarMinhasCIs(usuario_id, departamento_id, pagina, limite, filtro_departamento_id),
+      comunicacaoModel.contarMinhasCIs(usuario_id, departamento_id, filtro_departamento_id)
+    ]);
+    res.status(200).json({ sucesso: true, dados: comunicacoes, paginacao: { pagina, limite, total } });
+  } catch (err) {
+    next(err);
+  }
 };
 
 export const listarAnexosCI = async (req, res, next) => {

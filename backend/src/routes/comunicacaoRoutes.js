@@ -9,6 +9,9 @@ router.get('/recebidas', verificarToken, comunicacaoController.listarComunicacao
 router.get('/enviadas', verificarToken, comunicacaoController.listarComunicacaoEnviadas);
 // rota de busca com filtros — deve vir antes de /:id para não ser interceptada
 router.get('/buscar', verificarToken, comunicacaoController.buscarCIsComFiltros);
+router.get('/minhas', verificarToken, comunicacaoController.listarMinhasCIs);
+router.get('/rascunhos', verificarToken, comunicacaoController.listarRascunhos);
+router.put('/:id', verificarToken, comunicacaoController.atualizarCI);
 // arquivar é exclusivo do administrador geral
 router.post('/:id/arquivar', verificarToken, verificarAdmin, comunicacaoController.arquivarComunicacao);
 router.get('/:id/anexos', verificarToken, comunicacaoController.listarAnexosCI);

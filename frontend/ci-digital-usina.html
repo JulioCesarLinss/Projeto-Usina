@@ -626,6 +626,7 @@
   }
 
   .dept-row:hover { background: var(--surface); }
+  .dept-row.ativo { background: var(--usga-pale); font-weight: 600; color: var(--usga-dark); }
 
   .dept-dot {
     width: 10px; height: 10px;
@@ -1179,11 +1180,6 @@
       Relatórios
     </div>
     <div class="nav-label">Sistema</div>
-    <div class="nav-item" onclick="showPage('dashboard')">
-      <i class="ti ti-bell"></i>
-      Notificações
-      <span class="nav-badge urgent">5</span>
-    </div>
     <!-- Item de configurações — disponível para todos os usuários -->
     <div class="nav-item" onclick="showPage('configuracoes')">
       <i class="ti ti-settings"></i>
@@ -1196,11 +1192,7 @@
   </div>
 
   <div class="sidebar-footer">
-    <div class="nav-item" onclick="showPage('dashboard')">
-      <i class="ti ti-help-circle"></i>
-      Ajuda & Suporte
-    </div>
-    <div class="nav-item" onclick="showPage('dashboard')">
+    <div class="nav-item" onclick="fazerLogout()">
       <i class="ti ti-logout"></i>
       Sair
     </div>
@@ -1218,14 +1210,6 @@
       <div class="search-box">
         <i class="ti ti-search"></i>
         <input type="text" placeholder="Buscar C.I, setor, data...">
-      </div>
-      <div class="icon-btn" title="Notificações" onclick="showPage('dashboard')" style="position:relative">
-        <i class="ti ti-bell"></i>
-        <span class="notif-dot" id="notif-dot" style="display:none"></span>
-        <span class="notif-count-badge" id="notif-badge" style="display:none">0</span>
-      </div>
-      <div class="icon-btn" title="Calendário">
-        <i class="ti ti-calendar"></i>
       </div>
       <button class="btn btn-primary" onclick="showModal()">
         <i class="ti ti-plus"></i>
@@ -1280,12 +1264,7 @@
         <div class="tab-bar">
           <div class="tab active" onclick="mudarAbaCI('recebidas', this)">Recebidas <span class="tab-count" id="tab-count-recebidas">—</span></div>
           <div class="tab" onclick="mudarAbaCI('enviadas', this)">Enviadas <span class="tab-count" id="tab-count-enviadas">—</span></div>
-        </div>
-        <div class="filter-bar">
-          <i class="ti ti-filter" style="color:var(--text-faint);font-size:16px"></i>
-          <select id="filtro-depto"><option value="">Todos os departamentos</option></select>
-          <div class="filter-sep"></div>
-          <select style="max-width:130px" id="filtro-ordem"><option value="recente">Mais recente</option><option value="antigo">Mais antigo</option></select>
+          <div class="tab" onclick="mudarAbaCI('minhas', this)">Minhas C.I <span class="tab-count" id="tab-count-minhas">—</span></div>
         </div>
 
         <table class="ci-table">
@@ -1374,13 +1353,6 @@
               <option value="">Selecionar...</option>
             </select>
           </div>
-          <div class="form-group">
-            <label>Estado</label>
-            <select id="ci-estado">
-              <option value="rascunho">Rascunho</option>
-              <option value="enviada">Enviada</option>
-            </select>
-          </div>
         </div>
         <!-- Opção de destinatários: aparece após selecionar departamento -->
         <div id="ci-destinatarios-wrap" style="display:none" class="form-group full">
@@ -1414,9 +1386,19 @@
           <input type="file" id="ci-arquivo" style="display:none" accept=".pdf,.docx,.xlsx,.png,.jpg" onchange="atualizarNomeArquivo()">
         </div>
         <div class="form-actions">
-          <button class="btn btn-primary" id="btn-enviar-ci" onclick="enviarCI()"><i class="ti ti-send"></i> Enviar C.I</button>
+          <button class="btn-ghost" id="btn-cancelar-rascunho" onclick="cancelarEdicaoRascunho()" style="display:none"><i class="ti ti-x"></i> Cancelar</button>
+          <button class="btn-ghost" id="btn-salvar-rascunho" onclick="enviarCI('rascunho')"><i class="ti ti-file-pencil"></i> Salvar Rascunho</button>
+          <button class="btn btn-primary" id="btn-enviar-ci" onclick="enviarCI('enviada')"><i class="ti ti-send"></i> Enviar C.I</button>
         </div>
       </div>
+    </div>
+
+    <!-- Rascunhos salvos — carregados ao abrir Nova C.I -->
+    <div class="card" style="max-width:700px;margin-top:20px" id="card-rascunhos" style="display:none">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-file-pencil"></i> Rascunhos Salvos</div>
+      </div>
+      <div id="rascunhos-lista" style="padding:8px 0"></div>
     </div>
   </div>
 
@@ -1473,7 +1455,7 @@
     </div>
   </div>
 
-  <!-- PAGE: AUDITORIA -->
+  <!-- PAGE: AUDITORIA — dados reais via GET /api/auditoria/listar -->
   <div class="page" id="page-auditoria" style="display:none">
     <div class="card">
       <div class="card-header">
@@ -1481,11 +1463,10 @@
         <button class="btn-ghost" onclick="exportAuditCSV()"><i class="ti ti-download"></i> Exportar CSV</button>
       </div>
       <div class="filter-bar">
-        <select><option>Todos os usuários</option></select>
-        <select><option>Todos os tipos</option></select>
-        <input type="date" style="max-width:140px;padding:5px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12px">
+        <input type="date" id="audit-data-inicio" style="max-width:140px;padding:5px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12px" onchange="carregarAuditoria(1)">
         <span style="color:var(--text-muted);font-size:12px">até</span>
-        <input type="date" style="max-width:140px;padding:5px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12px">
+        <input type="date" id="audit-data-fim" style="max-width:140px;padding:5px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12px" onchange="carregarAuditoria(1)">
+        <button class="btn-ghost" onclick="document.getElementById('audit-data-inicio').value='';document.getElementById('audit-data-fim').value='';carregarAuditoria(1)">Limpar</button>
       </div>
       <table class="ci-table">
         <thead>
@@ -1494,25 +1475,16 @@
             <th>Usuário</th>
             <th>Ação</th>
             <th>C.I</th>
-            <th>Detalhes</th>
+            <th>IP</th>
           </tr>
         </thead>
-        <tbody>
-          <tr><td class="ci-date">09/05 08:14</td><td>Paulo Mendes</td><td><span class="status-badge unread">ENVIO</span></td><td><span class="ci-num">CI-2025-047</span></td><td style="color:var(--text-muted);font-size:12px">Enviado para Manutenção</td></tr>
-          <tr><td class="ci-date">08/05 14:32</td><td>João Silva</td><td><span class="status-badge read">LEITURA</span></td><td><span class="ci-num">CI-2025-043</span></td><td style="color:var(--text-muted);font-size:12px">IP: 10.0.1.42</td></tr>
-          <tr><td class="ci-date">08/05 09:20</td><td>Ana Carvalho</td><td><span class="status-badge pending">ENVIO</span></td><td><span class="ci-num">CI-2025-046</span></td><td style="color:var(--text-muted);font-size:12px">Enviado com 1 anexo</td></tr>
-          <tr><td class="ci-date">07/05 00:00</td><td>Sistema</td><td><span class="status-badge archived">ARQUIVO</span></td><td><span class="ci-num">CI-2025-040</span></td><td style="color:var(--text-muted);font-size:12px">Arquivado automaticamente</td></tr>
-          <tr><td class="ci-date">07/05 09:05</td><td>Carla Brito</td><td><span class="status-badge unread">ENVIO</span></td><td><span class="ci-num">CI-2025-045</span></td><td style="color:var(--text-muted);font-size:12px">12 destinatários</td></tr>
+        <tbody id="audit-tbody">
+          <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">Carregando...</td></tr>
         </tbody>
       </table>
       <div class="table-footer">
-        <div class="table-info">Exibindo <strong>1–5</strong> de <strong>312</strong> registros</div>
-        <div class="pagination">
-          <button class="page-btn active">1</button>
-          <button class="page-btn">2</button>
-          <button class="page-btn">…</button>
-          <button class="page-btn"><i class="ti ti-chevron-right"></i></button>
-        </div>
+        <div class="table-info" id="audit-table-info">—</div>
+        <div class="pagination" id="audit-pagination"></div>
       </div>
     </div>
   </div>
@@ -1576,6 +1548,8 @@ const state = {
   usuario: null,
   departamentos: [],
   ciAtual: null,
+  rascunhoAtual: null,
+  filtroDepartamento: null,
   abaAtiva: 'recebidas',
   paginaAtual: 1,
   limiteCI: 5,
@@ -1758,7 +1732,6 @@ async function carregarDepartamentos() {
     const selFiltro = document.getElementById('filtro-depto');
     state.departamentos.forEach(d => {
       sel.innerHTML += `<option value="${d.id}">${d.nome}</option>`;
-      if (selFiltro) selFiltro.innerHTML += `<option value="${d.id}">${d.nome}</option>`;
     });
   } catch (e) { /* ignora */ }
 }
@@ -1770,16 +1743,20 @@ async function carregarCIs() {
   const tbody = document.getElementById('ci-tbody');
   tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)"><i class="ti ti-loader" style="animation:spin .6s linear infinite;display:inline-block;margin-right:6px"></i> Carregando...</td></tr>';
   try {
-    const ep = state.abaAtiva === 'recebidas'
-      ? `/comunicacoes/recebidas?pagina=${state.paginaAtual}&limite=${state.limiteCI}`
-      : `/comunicacoes/enviadas?pagina=${state.paginaAtual}&limite=${state.limiteCI}`;
-    const data = await api('GET', ep);
+    const dept = state.filtroDepartamento ? `&departamento_filtro=${state.filtroDepartamento}` : '';
+    const epMap = {
+      recebidas: `/comunicacoes/recebidas?pagina=${state.paginaAtual}&limite=${state.limiteCI}${dept}`,
+      enviadas:  `/comunicacoes/enviadas?pagina=${state.paginaAtual}&limite=${state.limiteCI}${dept}`,
+      minhas:    `/comunicacoes/minhas?pagina=${state.paginaAtual}&limite=${state.limiteCI}${dept}`
+    };
+    const data = await api('GET', epMap[state.abaAtiva]);
     const cis = data.dados || [];
     state.totalCI = data.paginacao?.total || cis.length;
     const countEl = document.getElementById('tab-count-' + state.abaAtiva);
     if (countEl) countEl.textContent = state.totalCI;
     if (cis.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="ti ti-inbox"></i><p>Nenhuma C.I ${state.abaAtiva === 'recebidas' ? 'recebida' : 'enviada'} encontrada.</p></div></td></tr>`;
+      const labels = { recebidas: 'recebida', enviadas: 'enviada', minhas: 'encontrada' };
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="ti ti-inbox"></i><p>Nenhuma C.I ${labels[state.abaAtiva]} encontrada.</p></div></td></tr>`;
       document.getElementById('ci-table-info').textContent = '0 comunicações';
       document.getElementById('ci-pagination').innerHTML = '';
       return;
@@ -1796,17 +1773,37 @@ async function carregarCIs() {
 
 function renderizarLinhaCI(ci) {
   const data = ci.data_hora ? new Date(ci.data_hora).toLocaleDateString('pt-BR') : '—';
-  const estadoLabel = ci.estado === 'arquivada'
-    ? '<span class="status-badge archived">Arquivado</span>'
-    : ci.estado === 'enviada'
-    ? '<span class="status-badge read">Enviada</span>'
-    : '<span class="status-badge pending">Rascunho</span>';
+  const isRecebidas = state.abaAtiva === 'recebidas';
+
+  // recebidas → lida/não lida | enviadas → estado da CI | minhas → combinado
+  let statusLabel;
+  if (state.abaAtiva === 'recebidas') {
+    statusLabel = ci.lida
+      ? '<span class="status-badge read">✓ Lida</span>'
+      : '<span class="status-badge unread">Não lida</span>';
+  } else if (state.abaAtiva === 'minhas') {
+    const isMinha = ci.usuario_id === state.usuario?.id;
+    if (ci.estado === 'rascunho')   statusLabel = '<span class="status-badge pending">Rascunho</span>';
+    else if (ci.estado === 'arquivada') statusLabel = '<span class="status-badge archived">Arquivada</span>';
+    else if (isMinha) statusLabel = ci.total_lidas > 0
+      ? '<span class="status-badge read">✓ Lida</span>'
+      : '<span class="status-badge unread">Pendente</span>';
+    else statusLabel = ci.lida
+      ? '<span class="status-badge read">✓ Lida</span>'
+      : '<span class="status-badge unread">Não lida</span>';
+  } else {
+    if (ci.estado === 'rascunho')        statusLabel = '<span class="status-badge pending">Rascunho</span>';
+    else if (ci.estado === 'arquivada')  statusLabel = '<span class="status-badge archived">Arquivada</span>';
+    else if (ci.total_lidas > 0)         statusLabel = '<span class="status-badge read">✓ Lida</span>';
+    else                                 statusLabel = '<span class="status-badge unread">Pendente</span>';
+  }
+
   return `<tr onclick="abrirCIDoBackend(${ci.id})" style="cursor:pointer">
     <td><span class="priority-dot medium"></span></td>
     <td><span class="ci-num">CI-${String(ci.id).padStart(4,'0')}</span></td>
     <td class="ci-subject">${ci.titulo}<small>${ci.estado} · ${data}</small></td>
     <td><span class="dept-tag"><i class="ti ti-building" style="font-size:11px"></i> Depto. ${ci.departamento_id}</span></td>
-    <td>${estadoLabel}</td>
+    <td>${statusLabel}</td>
     <td class="ci-date">${data}</td>
     <td></td>
   </tr>`;
@@ -1952,8 +1949,8 @@ async function carregarNotificacoes() {
     const naoLidas = notifs.filter(n => !n.lida && !n.data_leitura).length;
     const badge = document.getElementById('notif-badge');
     const dot = document.getElementById('notif-dot');
-    if (naoLidas > 0) { badge.textContent = naoLidas; badge.style.display = ''; dot.style.display = ''; }
-    else { badge.style.display = 'none'; dot.style.display = 'none'; }
+    if (badge) { badge.textContent = naoLidas; badge.style.display = naoLidas > 0 ? '' : 'none'; }
+    if (dot) { dot.style.display = naoLidas > 0 ? '' : 'none'; }
     const navBadge = document.querySelector('.nav-badge');
     if (navBadge) navBadge.textContent = naoLidas || '';
     // exibe apenas notificações não lidas — somem ao ser marcadas
@@ -2043,8 +2040,63 @@ function onDestTipoChange() {
 // ═══════════════════════════════════════════════════════
 //  NOVA CI
 // ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  RASCUNHOS — carregar e editar na página Nova C.I
+// ═══════════════════════════════════════════════════════
+
+// carregarRascunhos — busca rascunhos do usuário e exibe abaixo do formulário
+async function carregarRascunhos() {
+  const card = document.getElementById('card-rascunhos');
+  const lista = document.getElementById('rascunhos-lista');
+  if (!card || !lista) return;
+  try {
+    const data = await api('GET', '/comunicacoes/rascunhos');
+    const rascunhos = data.dados || [];
+    if (rascunhos.length === 0) {
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = '';
+    lista.innerHTML = rascunhos.map(r => {
+      const data = r.data_hora ? new Date(r.data_hora).toLocaleDateString('pt-BR') : '—';
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border)">
+        <i class="ti ti-file-pencil" style="color:var(--usga-mid);font-size:18px"></i>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:13px">${r.titulo || '(sem título)'}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${data}</div>
+        </div>
+        <button class="btn-ghost" style="font-size:12px" onclick="editarRascunho(${r.id}, '${encodeURIComponent(r.titulo || '')}', '${encodeURIComponent(r.descricao || '')}', ${r.departamento_id})">
+          <i class="ti ti-edit"></i> Continuar
+        </button>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    card.style.display = 'none';
+  }
+}
+
+// editarRascunho — popula o formulário com os dados do rascunho selecionado
+function editarRascunho(id, titulo, descricao, departamento_id) {
+  state.rascunhoAtual = id;
+  document.getElementById('ci-titulo').value = decodeURIComponent(titulo);
+  document.getElementById('ci-descricao').value = decodeURIComponent(descricao);
+  document.getElementById('ci-departamento').value = departamento_id;
+  onDepartamentoChange();
+  document.getElementById('btn-cancelar-rascunho').style.display = '';
+  document.getElementById('btn-enviar-ci').innerHTML = '<i class="ti ti-send"></i> Enviar Rascunho';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// cancelarEdicaoRascunho — limpa o estado de edição do rascunho
+function cancelarEdicaoRascunho() {
+  state.rascunhoAtual = null;
+  document.getElementById('btn-cancelar-rascunho').style.display = 'none';
+  document.getElementById('btn-enviar-ci').innerHTML = '<i class="ti ti-send"></i> Enviar C.I';
+  limparFormularioCI();
+}
+
+
 async function enviarCI(estado) {
-  estado = estado || document.getElementById('ci-estado').value;
   const titulo = document.getElementById('ci-titulo').value.trim();
   const descricao = document.getElementById('ci-descricao').value.trim();
   const departamento_id = parseInt(document.getElementById('ci-departamento').value);
@@ -2062,11 +2114,19 @@ async function enviarCI(estado) {
   }
 
   const btn = document.getElementById('btn-enviar-ci');
+  const btnRasc = document.getElementById('btn-salvar-rascunho');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span> Enviando...';
+  btnRasc.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> ' + (estado === 'rascunho' ? 'Salvando...' : 'Enviando...');
   try {
-    const data = await api('POST', '/comunicacoes/criar', { titulo, descricao, departamento_id, estado, destinatarios });
-    const ciId = data.dados?.id;
+    let data;
+    if (state.rascunhoAtual) {
+      // atualiza rascunho existente via PUT
+      data = await api('PUT', '/comunicacoes/' + state.rascunhoAtual, { titulo, descricao, departamento_id, estado, destinatarios });
+    } else {
+      data = await api('POST', '/comunicacoes/criar', { titulo, descricao, departamento_id, estado, destinatarios });
+    }
+    const ciId = data.dados?.id || state.rascunhoAtual;
     const arquivo = document.getElementById('ci-arquivo').files[0];
     if (arquivo && ciId) {
       try {
@@ -2076,21 +2136,24 @@ async function enviarCI(estado) {
         await apiForm('/upload', fd);
       } catch (e) { toast('C.I enviada, mas falha no anexo: ' + e.message, 'info'); }
     }
-    toast(estado === 'rascunho' ? 'Rascunho salvo!' : 'C.I enviada com sucesso!');
-    limparFormularioCI();
-    showPage('dashboard');
-    await Promise.all([carregarCIs(), carregarNotificacoes(), atualizarStats()]);
+    if (estado === 'rascunho') {
+      toast('Rascunho salvo!');
+      cancelarEdicaoRascunho();
+      await carregarRascunhos();
+    } else {
+      toast('C.I enviada com sucesso!');
+      limparFormularioCI();
+      showPage('dashboard');
+      await Promise.all([carregarCIs(), carregarNotificacoes(), atualizarStats()]);
+    }
   } catch (err) {
     toast('Erro: ' + err.message, 'error');
-    btn.disabled = false;
-    btn.innerHTML = '<i class="ti ti-send"></i> Enviar C.I';
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="ti ti-send"></i> Enviar C.I';
+    btnRasc.disabled = false;
+    btn.innerHTML = '<i class="ti ti-send"></i> ' + (state.rascunhoAtual ? 'Enviar Rascunho' : 'Enviar C.I');
   }
 }
-
-function salvarRascunho() { enviarCI('rascunho'); }
 
 function limparFormularioCI() {
   document.getElementById('ci-titulo').value = '';
@@ -2127,11 +2190,13 @@ async function atualizarStats() {
 //  NAVEGAÇÃO
 // ═══════════════════════════════════════════════════════
 function showPage(name) {
-  // bloqueia acesso a páginas restritas conforme o cargo do usuário
   if (!validarAcessoPagina(name, state.usuario)) {
     toast('Você não tem permissão para acessar essa página.', 'error');
     return;
   }
+  // carrega dados reais ao abrir auditoria
+  if (name === 'auditoria') carregarAuditoria(1);
+  if (name === 'nova') { cancelarEdicaoRascunho(); carregarRascunhos(); }
   // Ao abrir configurações, preenche o avatar com as iniciais do usuário logado
   if (name === 'configuracoes' && state.usuario) {
     const iniciais = (state.usuario.nome || '').split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
@@ -2205,6 +2270,69 @@ function exportAuditCSV() {
 
 
 // ═══════════════════════════════════════════════════════
+//  AUDITORIA — carrega logs reais do backend
+// ═══════════════════════════════════════════════════════
+
+const auditState = { pagina: 1, limite: 10, total: 0 };
+
+async function carregarAuditoria(pagina = 1) {
+  auditState.pagina = pagina;
+  const tbody = document.getElementById('audit-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted)"><i class="ti ti-loader" style="animation:spin .6s linear infinite;display:inline-block"></i> Carregando...</td></tr>';
+
+  const dataInicio = document.getElementById('audit-data-inicio')?.value || '';
+  const dataFim = document.getElementById('audit-data-fim')?.value || '';
+  let url = `/auditoria/listar?pagina=${pagina}&limite=${auditState.limite}`;
+  if (dataInicio) url += `&data_inicio=${dataInicio}`;
+  if (dataFim) url += `&data_fim=${dataFim}`;
+
+  try {
+    const data = await api('GET', url);
+    const logs = data.dados || [];
+    auditState.total = data.paginacao?.total || logs.length;
+
+    if (logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="ti ti-clipboard-off"></i><p>Nenhum registro encontrado.</p></div></td></tr>';
+    } else {
+      tbody.innerHTML = logs.map(l => {
+        const data = l.data_hora ? new Date(l.data_hora).toLocaleString('pt-BR') : '—';
+        const ciNum = l.comunicacao_id ? `<span class="ci-num">CI-${String(l.comunicacao_id).padStart(4,'0')}</span>` : '—';
+        return `<tr>
+          <td class="ci-date">${data}</td>
+          <td style="font-weight:500">${l.usuario_nome || '—'}</td>
+          <td>${l.acao_realizada || '—'}</td>
+          <td>${ciNum}</td>
+          <td style="color:var(--text-muted);font-size:12px">${l.ip_usuario || '—'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    const inicio = (pagina - 1) * auditState.limite + 1;
+    const fim = Math.min(pagina * auditState.limite, auditState.total);
+    document.getElementById('audit-table-info').innerHTML = `Exibindo <strong>${inicio}–${fim}</strong> de <strong>${auditState.total}</strong> registros`;
+    renderizarPaginacaoAudit();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="ti ti-alert-circle"></i><p>Erro ao carregar: ${err.message}</p></div></td></tr>`;
+  }
+}
+
+function renderizarPaginacaoAudit() {
+  const totalPaginas = Math.ceil(auditState.total / auditState.limite);
+  const pag = document.getElementById('audit-pagination');
+  if (!pag || totalPaginas <= 1) { if(pag) pag.innerHTML = ''; return; }
+  let html = '';
+  if (auditState.pagina > 1) html += `<button class="page-btn" onclick="carregarAuditoria(${auditState.pagina-1})"><i class="ti ti-chevron-left"></i></button>`;
+  for (let i = 1; i <= totalPaginas; i++) {
+    if (i === auditState.pagina) html += `<button class="page-btn active">${i}</button>`;
+    else if (i <= 2 || i >= totalPaginas-1 || Math.abs(i-auditState.pagina) <= 1) html += `<button class="page-btn" onclick="carregarAuditoria(${i})">${i}</button>`;
+    else if (!html.endsWith('…</button>')) html += `<button class="page-btn" style="cursor:default">…</button>`;
+  }
+  if (auditState.pagina < totalPaginas) html += `<button class="page-btn" onclick="carregarAuditoria(${auditState.pagina+1})"><i class="ti ti-chevron-right"></i></button>`;
+  pag.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
 //  DASHBOARD — departamentos e histórico recente reais
 // ═══════════════════════════════════════════════════════
 
@@ -2221,13 +2349,22 @@ async function carregarDeptDashboard() {
       return;
     }
     container.innerHTML = depts.map((d, i) => `
-      <div class="dept-row">
+      <div class="dept-row" data-dept-id="${d.id}" onclick="filtrarPorDepartamento(${d.id})">
         <span class="dept-dot" style="background:${cores[i % cores.length]}"></span>
         ${d.nome}
       </div>`).join('');
   } catch (e) {
     container.innerHTML = '<div class="empty-state"><p>Erro ao carregar.</p></div>';
   }
+}
+
+function filtrarPorDepartamento(deptId) {
+  state.filtroDepartamento = state.filtroDepartamento === deptId ? null : deptId;
+  state.paginaAtual = 1;
+  document.querySelectorAll('#dept-list .dept-row').forEach(el => {
+    el.classList.toggle('ativo', parseInt(el.dataset.deptId) === state.filtroDepartamento);
+  });
+  carregarCIs();
 }
 
 // carregarAuditDashboard — exibe os 4 logs mais recentes no painel lateral
