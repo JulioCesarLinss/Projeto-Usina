@@ -51,7 +51,9 @@ export const criarCI = async (req, res, next) => {
       }
     }
 
-    await registrarLog(usuario_id, `CI_CRIADA estado=${estadoFinal}`, getClientIP(req), resultado.insertId);
+    if (estadoFinal === 'enviada') {
+      await registrarLog(usuario_id, 'Envio de C.I', getClientIP(req), resultado.insertId);
+    }
 
     res.status(201).json({
       sucesso: true,
@@ -213,7 +215,7 @@ export const arquivarComunicacao = async (req, res, next) =>{
                 'ERRO_ARQUIVAR_CI'
             );
         }
-        await registrarLog(req.usuario.id, 'CI_ARQUIVADA', getClientIP(req), parseInt(id));
+        await registrarLog(req.usuario.id, 'C.I Arquivada', getClientIP(req), parseInt(id));
         res.status(200).json({
                 sucesso: true,
                 mensagem: 'Comunicação arquivada com sucesso',
@@ -288,7 +290,7 @@ export const atualizarCI = async (req, res, next) => {
         await destinatarioModel.adicionarDestinatario(parseInt(id), dest.usuario_id, dest.departamento_id);
         await notificacaoModel.criarNotificacao(`Nova C.I recebida: ${titulo}`, dest.usuario_id, parseInt(id));
       }
-      await registrarLog(req.usuario.id, 'CI_ENVIADA (rascunho)', getClientIP(req), parseInt(id));
+      await registrarLog(req.usuario.id, 'Envio de C.I', getClientIP(req), parseInt(id));
     }
 
     res.status(200).json({ sucesso: true, mensagem: 'CI atualizada com sucesso', dados: { id, estado: estadoFinal } });
@@ -310,6 +312,30 @@ export const listarMinhasCIs = async (req, res, next) => {
       comunicacaoModel.contarMinhasCIs(usuario_id, departamento_id, filtro_departamento_id)
     ]);
     res.status(200).json({ sucesso: true, dados: comunicacoes, paginacao: { pagina, limite, total } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const listarDestinatariosCI = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!id || isNaN(id)) throw new ValidationError('ID inválido', 'ID_INVALIDO', []);
+
+    const [ci, destinatarios] = await Promise.all([
+      comunicacaoModel.buscarCIporID(id),
+      destinatarioModel.listarDestinatariosPorCI(id)
+    ]);
+
+    let para_todos = false;
+    if (ci && destinatarios.length > 0) {
+      const usuariosDept = await usuarioModel.listarPorDepartamento(ci.departamento_id);
+      // desconta o próprio remetente da contagem do departamento
+      const totalDeptSemRemetente = usuariosDept.filter(u => u.id !== ci.usuario_id).length;
+      para_todos = totalDeptSemRemetente > 0 && destinatarios.length >= totalDeptSemRemetente;
+    }
+
+    res.status(200).json({ sucesso: true, dados: destinatarios, para_todos });
   } catch (err) {
     next(err);
   }

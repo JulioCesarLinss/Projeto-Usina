@@ -41,7 +41,7 @@ export const confirmarLeitura = async (req, res, next) => {
       throw new DatabaseError('Erro ao confirmar leitura', 'ERRO_CONFIRMAR_LEITURA');
     }
 
-    await registrarLog(usuario_id, 'CI_LEITURA_CONFIRMADA', getClientIP(req), parseInt(id));
+    await registrarLog(usuario_id, 'Confirmação de Leitura', getClientIP(req), parseInt(id));
 
     res.status(201).json({
       sucesso: true,

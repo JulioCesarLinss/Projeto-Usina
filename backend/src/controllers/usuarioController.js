@@ -367,6 +367,33 @@ export const atualizarUsuario = async (req, res, next) => {
   }
 };
 
+export const trocarSenhaUsuario = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { senhaAtual, senhaNova } = req.body;
+
+    if (!senhaAtual || !senhaNova)
+      throw new ValidationError('Preencha todos os campos', 'CAMPOS_OBRIGATORIOS', []);
+    if (senhaNova.length < 8)
+      throw new ValidationError('A nova senha deve ter no mínimo 8 caracteres', 'SENHA_CURTA', []);
+
+    const usuario = await usuarioModel.buscarSenhaId(id);
+    if (!usuario)
+      throw new NotFoundError('Usuário não encontrado', 'USUARIO_NAO_ENCONTRADO');
+
+    const senhaCorreta = await bcrypt.compare(senhaAtual, usuario.senha);
+    if (!senhaCorreta)
+      throw new AuthenticationError('Senha atual incorreta', 'SENHA_ATUAL_INCORRETA');
+
+    const senhaHash = await bcrypt.hash(senhaNova, 12);
+    await usuarioModel.atualizarSenha(id, senhaHash);
+
+    res.status(200).json({ sucesso: true, mensagem: 'Senha alterada com sucesso' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // soft delete — inativa o usuário sem remover do banco
 export const deletarUsuario = async (req, res, next) => {
   try {

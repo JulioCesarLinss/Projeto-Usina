@@ -26,6 +26,12 @@ export const buscarId = async (id) => {
   return results[0];
 };
 
+export const buscarSenhaId = async (id) => {
+  const sql = 'SELECT id, senha FROM usuario WHERE id = ?';
+  const [results] = await pool.query(sql, [id]);
+  return results[0];
+};
+
 export const listarUsuarios = async (pagina = 1, limite = 20) => {
   const offset = (pagina - 1) * limite;
   // filtra apenas usuários ativos

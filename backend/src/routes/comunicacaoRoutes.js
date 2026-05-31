@@ -15,6 +15,7 @@ router.put('/:id', verificarToken, comunicacaoController.atualizarCI);
 // arquivar é exclusivo do administrador geral
 router.post('/:id/arquivar', verificarToken, verificarAdmin, comunicacaoController.arquivarComunicacao);
 router.get('/:id/anexos', verificarToken, comunicacaoController.listarAnexosCI);
+router.get('/:id/destinatarios', verificarToken, comunicacaoController.listarDestinatariosCI);
 router.get('/:id', verificarToken, comunicacaoController.buscarCIporID);
 
 export default router;

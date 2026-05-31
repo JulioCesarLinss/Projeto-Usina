@@ -33,6 +33,9 @@ router.get('/departamento/:id', verificarToken, usuarioController.listarPorDepar
 // Buscar usuário por ID — qualquer usuário logado pode ver
 router.get('/:id', verificarToken, usuarioController.buscarUsuario);
 
+// Trocar senha — só o próprio usuário pode trocar sua senha
+router.put('/:id/senha', verificarToken, verificarProprioOuAdmin, usuarioController.trocarSenhaUsuario);
+
 // Atualizar usuário — só o próprio usuário ou admin pode editar
 router.put('/:id', verificarToken, verificarProprioOuAdmin, usuarioController.atualizarUsuario);
 

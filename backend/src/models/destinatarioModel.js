@@ -6,10 +6,13 @@ export const adicionarDestinatario = async (comunicacao_id, usuario_id, departam
   return result;
 };
 
-export const listarDestinatariosPorCI = async (comunicacao_id, pagina = 1, limite = 20) => {
-  const offset = (pagina - 1) * limite;
-  const sql = 'SELECT * FROM destinatario WHERE comunicacao_id = ? LIMIT ? OFFSET ?';
-  const [results] = await pool.query(sql, [comunicacao_id, limite, offset]);
+export const listarDestinatariosPorCI = async (comunicacao_id) => {
+  const sql = `
+    SELECT d.usuario_id, d.departamento_id, u.nome AS usuario_nome
+    FROM destinatario d
+    LEFT JOIN usuario u ON u.id = d.usuario_id
+    WHERE d.comunicacao_id = ?`;
+  const [results] = await pool.query(sql, [comunicacao_id]);
   return results;
 };
 

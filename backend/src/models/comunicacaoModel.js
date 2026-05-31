@@ -18,53 +18,34 @@ export const buscarCIporID = async (id) => {
 };
 
 export const contarCIRecebidas = async (departamento_id, usuario_id, verTodos = false, filtro_departamento_id = null) => {
-  if (filtro_departamento_id) {
-    // filtro por dept: não lidas de qualquer data + lidas de hoje
-    const sql = `SELECT COUNT(*) AS total FROM comunicacao c
-       LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
-       WHERE c.departamento_id = ? AND c.usuario_id != ? AND c.estado = 'enviada'
-         AND (cl.id IS NULL OR DATE(cl.data_hora) = CURDATE())`;
-    const [results] = await pool.query(sql, [usuario_id, filtro_departamento_id, usuario_id]);
-    return results[0].total;
-  }
-  const base = verTodos
-    ? `SELECT COUNT(*) AS total FROM comunicacao c
-       WHERE c.usuario_id != ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE()`
-    : `SELECT COUNT(*) AS total FROM comunicacao c
-       WHERE c.departamento_id = ? AND c.usuario_id != ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE()`;
-  const params = verTodos ? [usuario_id] : [departamento_id, usuario_id];
-  const [results] = await pool.query(base, params);
+  const deptCond = filtro_departamento_id
+    ? 'AND c.departamento_id = ?'
+    : '';
+  const deptParams = filtro_departamento_id ? [filtro_departamento_id] : [];
+  // todos os cargos: só aparecem CIs onde o usuário é destinatário explícito
+  const sql = `SELECT COUNT(*) AS total FROM comunicacao c
+    INNER JOIN destinatario dest ON dest.comunicacao_id = c.id AND dest.usuario_id = ?
+    WHERE c.usuario_id != ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE()
+    ${deptCond}`;
+  const [results] = await pool.query(sql, [usuario_id, usuario_id, ...deptParams]);
   return results[0].total;
 };
 
 export const listarCIRecebidas = async (departamento_id, usuario_id, pagina = 1, limite = 20, verTodos = false, filtro_departamento_id = null) => {
   const offset = (pagina - 1) * limite;
-  if (filtro_departamento_id) {
-    // filtro por dept: não lidas de qualquer data + lidas de hoje
-    const sql = `SELECT c.*, CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS lida
-       FROM comunicacao c
-       LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
-       WHERE c.departamento_id = ? AND c.usuario_id != ? AND c.estado = 'enviada'
-         AND (cl.id IS NULL OR DATE(cl.data_hora) = CURDATE())
-       ORDER BY cl.id IS NOT NULL, c.data_hora DESC LIMIT ? OFFSET ?`;
-    const [results] = await pool.query(sql, [usuario_id, filtro_departamento_id, usuario_id, limite, offset]);
-    return results;
-  }
-  const base = verTodos
-    ? `SELECT c.*, CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS lida
-       FROM comunicacao c
-       LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
-       WHERE c.usuario_id != ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE()
-       ORDER BY cl.id IS NOT NULL, c.data_hora DESC LIMIT ? OFFSET ?`
-    : `SELECT c.*, CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS lida
-       FROM comunicacao c
-       LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
-       WHERE c.departamento_id = ? AND c.usuario_id != ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE()
-       ORDER BY cl.id IS NOT NULL, c.data_hora DESC LIMIT ? OFFSET ?`;
-  const params = verTodos
-    ? [usuario_id, usuario_id, limite, offset]
-    : [usuario_id, departamento_id, usuario_id, limite, offset];
-  const [results] = await pool.query(base, params);
+  const deptCond = filtro_departamento_id
+    ? 'AND c.departamento_id = ?'
+    : '';
+  const deptParams = filtro_departamento_id ? [filtro_departamento_id] : [];
+  // todos os cargos: só mostra CIs onde o usuário é destinatário explícito
+  const sql = `SELECT c.*, CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS lida
+    FROM comunicacao c
+    INNER JOIN destinatario dest ON dest.comunicacao_id = c.id AND dest.usuario_id = ?
+    LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
+    WHERE c.usuario_id != ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE()
+    ${deptCond}
+    ORDER BY cl.id IS NOT NULL, c.data_hora DESC LIMIT ? OFFSET ?`;
+  const [results] = await pool.query(sql, [usuario_id, usuario_id, usuario_id, ...deptParams, limite, offset]);
   return results;
 };
 
@@ -86,7 +67,8 @@ export const listarCIEnviadas = async (usuario_id, pagina = 1, limite = 20, filt
     : [usuario_id, limite, offset];
   const sql = `
     SELECT c.*,
-      (SELECT COUNT(*) FROM confirmacao_leitura cl WHERE cl.comunicacao_id = c.id) AS total_lidas
+      (SELECT COUNT(*) FROM confirmacao_leitura cl WHERE cl.comunicacao_id = c.id) AS total_lidas,
+      (SELECT COUNT(*) FROM destinatario d WHERE d.comunicacao_id = c.id) AS total_destinatarios
     FROM comunicacao c
     WHERE c.usuario_id = ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE() ${deptCond}
     ORDER BY c.data_hora DESC LIMIT ? OFFSET ?`;
@@ -120,7 +102,8 @@ export const listarMinhasCIs = async (usuario_id, departamento_id, pagina = 1, l
     const sql = `
       SELECT DISTINCT c.*,
         CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS lida,
-        (SELECT COUNT(*) FROM confirmacao_leitura cl2 WHERE cl2.comunicacao_id = c.id) AS total_lidas
+        (SELECT COUNT(*) FROM confirmacao_leitura cl2 WHERE cl2.comunicacao_id = c.id) AS total_lidas,
+        (SELECT COUNT(*) FROM destinatario d WHERE d.comunicacao_id = c.id) AS total_destinatarios
       FROM comunicacao c
       LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
       WHERE c.departamento_id = ? AND (c.usuario_id = ? OR c.estado = 'enviada')
@@ -131,7 +114,8 @@ export const listarMinhasCIs = async (usuario_id, departamento_id, pagina = 1, l
   const sql = `
     SELECT DISTINCT c.*,
       CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS lida,
-      (SELECT COUNT(*) FROM confirmacao_leitura cl2 WHERE cl2.comunicacao_id = c.id) AS total_lidas
+      (SELECT COUNT(*) FROM confirmacao_leitura cl2 WHERE cl2.comunicacao_id = c.id) AS total_lidas,
+      (SELECT COUNT(*) FROM destinatario d WHERE d.comunicacao_id = c.id) AS total_destinatarios
     FROM comunicacao c
     LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
     WHERE c.usuario_id = ?
