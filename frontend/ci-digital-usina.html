@@ -87,11 +87,11 @@
       Nova C.I
     </div>
     <div class="nav-label">Gerencial</div>
-    <div class="nav-item gerente-admin-only" onclick="showPage('visaogeral')">
+    <div class="nav-item supervisor-acima-only" onclick="showPage('visaogeral')">
       <i class="ti ti-layout-grid"></i>
       Visão Geral
     </div>
-    <div class="nav-item admin-supervisor-only" onclick="showPage('auditoria')">
+    <div class="nav-item gerente-admin-only" onclick="showPage('auditoria')">
       <i class="ti ti-activity"></i>
       Auditoria
     </div>
@@ -227,7 +227,7 @@
         </div>
 
         <!-- DEPARTMENTS -->
-        <div class="card">
+        <div class="card gerente-admin-only">
           <div class="card-header">
             <div class="card-title"><i class="ti ti-building"></i> Por Departamento</div>
           </div>
@@ -237,7 +237,7 @@
         </div>
 
         <!-- AUDIT TRAIL -->
-        <div class="card supervisor-acima-only">
+        <div class="card gerente-admin-only">
           <div class="card-header">
             <div class="card-title"><i class="ti ti-activity"></i> Histórico Recente</div>
             <button class="btn-ghost" onclick="showPage('auditoria')">Ver tudo</button>

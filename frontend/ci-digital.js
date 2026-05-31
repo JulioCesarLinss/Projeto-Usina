@@ -157,7 +157,7 @@ async function iniciarApp() {
   await Promise.all([carregarCIs(), carregarNotificacoes()]);
   atualizarStats();
   carregarDeptDashboard();
-  if (state.usuario.cargo_id === 1 || state.usuario.cargo_id === 3) carregarAuditDashboard();
+  if (state.usuario.cargo_id <= 2) carregarAuditDashboard();
   aplicarPermissoesFrontend(state.usuario);
 }
 
@@ -182,10 +182,23 @@ async function carregarDepartamentos() {
     const data = await api('GET', '/departamentos/listar');
     state.departamentos = data.dados || [];
     const sel = document.getElementById('ci-departamento');
-    const selFiltro = document.getElementById('filtro-depto');
-    state.departamentos.forEach(d => {
-      sel.innerHTML += `<option value="${d.id}">${d.nome}</option>`;
+    const cargo = state.usuario?.cargo_id || 4;
+
+    // Cargo 3 e 4: só pode enviar para o próprio departamento
+    const deptosPerm = (cargo <= 2)
+      ? state.departamentos
+      : state.departamentos.filter(d => d.id === state.usuario.departamento_id);
+
+    sel.innerHTML = '<option value="">Selecionar...</option>';
+    deptosPerm.forEach(d => {
+      sel.innerHTML += `<option value="${d.id}">${NOMES_DEPT[d.nome.toUpperCase()] || d.nome}</option>`;
     });
+
+    // Pré-seleciona quando só há uma opção disponível
+    if (deptosPerm.length === 1) {
+      sel.value = deptosPerm[0].id;
+      sel.dispatchEvent(new Event('change'));
+    }
   } catch (e) { /* ignora */ }
 }
 
@@ -393,7 +406,7 @@ async function abrirCIDoBackend(id, modoAdmin = false) {
       ? '<span style="color:var(--text-muted)">⬤ Arquivada</span>'
       : `<span style="color:var(--usga-mid);font-weight:600">⬤ ${ci.estado}</span>`;
     document.getElementById('modal-subject').textContent = ci.titulo;
-    document.getElementById('modal-body-text').textContent = ci.descricao;
+    document.getElementById('modal-body-text').innerHTML = linkificar(ci.descricao);
     const isAdmin = state.usuario?.cargo_id === 1;
     document.getElementById('btn-arquivar').style.display = (isAdmin && ci.estado !== 'arquivada') ? '' : 'none';
 
@@ -762,7 +775,7 @@ function openCI(num, subject, from, to, prio, date, body, fromName) {
     ? '<span style="color:var(--warning);font-weight:600">⬤ Média</span>'
     : '<span style="color:var(--usga-light);font-weight:600">⬤ Baixa</span>';
   document.getElementById('modal-subject').textContent = subject;
-  document.getElementById('modal-body-text').textContent = body;
+  document.getElementById('modal-body-text').innerHTML = linkificar(body);
 }
 
 function closeModal() {
@@ -953,9 +966,9 @@ function aplicarPermissoesFrontend(usuario) {
 function validarAcessoPagina(pagina, usuario) {
   const cargo = usuario?.cargo_id || 4;
   if (pagina === 'departamentos' && cargo !== 1) return false;
-  if (pagina === 'visaogeral' && cargo > 2) return false;
+  if (pagina === 'visaogeral' && cargo > 3) return false;
   if (pagina === 'relatorios' && cargo > 2) return false;
-  if (pagina === 'auditoria' && cargo !== 1 && cargo !== 3) return false;
+  if (pagina === 'auditoria' && cargo > 2) return false;
   return true;
 }
 
@@ -975,6 +988,26 @@ const VG_CORES = ['#43931F','#1A6B9A','#B07A18','#7AB260','#C8382A','#888','#5A3
 async function carregarVisaoGeral() {
   const lista = document.getElementById('vg-dept-lista');
   if (!lista) return;
+
+  // Supervisor: exibe e carrega apenas o próprio departamento
+  if (state.usuario?.cargo_id === 3) {
+    const deptoId = state.usuario.departamento_id;
+    const depto = state.departamentos.find(d => d.id === deptoId);
+    if (!depto) {
+      lista.innerHTML = '<div class="empty-state"><p>Departamento não encontrado.</p></div>';
+      return;
+    }
+    const nomeDepto = NOMES_DEPT[depto.nome.toUpperCase()] || depto.nome;
+    lista.innerHTML = `
+      <div class="vg-dept-item ativo" data-id="${depto.id}">
+        <span class="vg-dept-dot" style="background:#43931F"></span>
+        <span style="flex:1">${nomeDepto}</span>
+      </div>`;
+    selecionarDeptVG(depto.id, depto.nome);
+    return;
+  }
+
+  // Admin / Gerente: exibe todos os departamentos com stats
   try {
     const data = await api('GET', '/departamentos/stats');
     const depts = data.dados || [];
@@ -1237,6 +1270,22 @@ async function criarUsuarioCA() {
     btn.disabled = false;
     btn.innerHTML = original;
   }
+}
+
+// ═══════════════════════════════════════════════════════
+//  UTILITÁRIOS DE TEXTO
+// ═══════════════════════════════════════════════════════
+function linkificar(texto) {
+  if (!texto) return '';
+  const escaped = texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  return escaped
+    .replace(/(https?:\/\/[^\s]+)/g, url =>
+      `<a href="${url}" target="_blank" rel="noopener noreferrer" class="ci-link">${url}</a>`)
+    .replace(/\n/g, '<br>');
 }
 
 // ═══════════════════════════════════════════════════════
