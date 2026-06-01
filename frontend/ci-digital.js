@@ -449,9 +449,6 @@ async function abrirCIDoBackend(id, modoAdmin = false) {
       document.getElementById('modal-to').textContent = nomeDeptoRemetente;
     }
     document.getElementById('modal-date').textContent = dataFmt;
-    document.getElementById('modal-prio').innerHTML = ci.estado === 'arquivada'
-      ? '<span style="color:var(--text-muted)">⬤ Arquivada</span>'
-      : `<span style="color:var(--usga-mid);font-weight:600">⬤ ${ci.estado}</span>`;
     document.getElementById('modal-subject').textContent = ci.titulo;
     document.getElementById('modal-body-text').innerHTML = linkificar(ci.descricao);
     const podeArquivar = state.usuario?.cargo_id <= 2;
@@ -825,11 +822,6 @@ function openCI(num, subject, from, to, prio, date, body, fromName) {
   document.getElementById('modal-from').textContent = (fromName || from) + ' · Depto. ' + from;
   document.getElementById('modal-to').textContent = to;
   document.getElementById('modal-date').textContent = date;
-  document.getElementById('modal-prio').innerHTML = prio === 'Alta'
-    ? '<span style="color:var(--danger);font-weight:600">⬤ Alta / Urgente</span>'
-    : prio === 'Média'
-    ? '<span style="color:var(--warning);font-weight:600">⬤ Média</span>'
-    : '<span style="color:var(--usga-light);font-weight:600">⬤ Baixa</span>';
   document.getElementById('modal-subject').textContent = subject;
   document.getElementById('modal-body-text').innerHTML = linkificar(body);
 }
