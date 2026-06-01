@@ -183,6 +183,7 @@
           <div class="tab active" onclick="mudarAbaCI('recebidas', this)">Recebidas <span class="tab-count" id="tab-count-recebidas">—</span></div>
           <div class="tab" onclick="mudarAbaCI('enviadas', this)">Enviadas <span class="tab-count" id="tab-count-enviadas">—</span></div>
           <div class="tab" onclick="mudarAbaCI('minhas', this)">Minhas C.I <span class="tab-count" id="tab-count-minhas">—</span></div>
+          <div class="tab" onclick="mudarAbaCI('arquivadas', this)">Arquivadas <span class="tab-count" id="tab-count-arquivadas">—</span></div>
           <div style="flex:1"></div>
           <div class="tab-search-wrap">
             <i class="ti ti-search"></i>
@@ -339,9 +340,14 @@
             <div>
               <div id="config-info-nome" style="font-size:16px;font-weight:600;color:var(--text-primary)">—</div>
               <div id="config-info-cargo" style="font-size:12px;color:var(--text-muted);margin-top:2px">—</div>
-              <button class="btn-ghost" style="font-size:12px;margin-top:8px;padding:4px 10px" onclick="document.getElementById('config-foto-input').click()">
-                <i class="ti ti-upload"></i> Alterar foto
-              </button>
+              <div style="display:flex;gap:6px;margin-top:8px">
+                <button class="btn-ghost" style="font-size:12px;padding:4px 10px" onclick="document.getElementById('config-foto-input').click()">
+                  <i class="ti ti-upload"></i> Alterar foto
+                </button>
+                <button id="btn-remover-foto" class="btn-ghost" style="font-size:12px;padding:4px 10px;color:var(--danger);display:none" onclick="removerFotoPerfil()">
+                  <i class="ti ti-trash"></i> Remover
+                </button>
+              </div>
               <input type="file" id="config-foto-input" accept="image/*" style="display:none" onchange="previewFotoPerfil(this)">
             </div>
           </div>

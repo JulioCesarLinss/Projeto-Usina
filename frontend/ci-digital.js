@@ -86,19 +86,61 @@ async function fazerLogin() {
 // ═══════════════════════════════════════════════════════
 //  CONFIGURAÇÕES
 // ═══════════════════════════════════════════════════════
-function previewFotoPerfil(input) {
+async function previewFotoPerfil(input) {
   const file = input.files[0];
   if (!file) return;
   if (file.size > 2 * 1024 * 1024) { toast('Imagem deve ter no máximo 2 MB', 'error'); return; }
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const avatar = document.getElementById('config-avatar');
-    avatar.style.backgroundImage = `url(${e.target.result})`;
-    avatar.style.backgroundSize = 'cover';
-    avatar.textContent = '';
-  };
-  reader.readAsDataURL(file);
-  toast('Foto atualizada visualmente. Salvar no servidor em breve.', 'info');
+
+  const formData = new FormData();
+  formData.append('foto', file);
+
+  try {
+    const resp = await fetch(`http://localhost:3000/api/usuarios/${state.usuario.id}/foto`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + state.token },
+      body: formData
+    });
+    const data = await resp.json();
+    if (!data.sucesso) throw new Error(data.erro || 'Erro ao salvar');
+
+    const url = 'http://localhost:3000' + data.dados.foto_url;
+    state.usuario.foto_url = data.dados.foto_url;
+    localStorage.setItem('ci_usuario', JSON.stringify(state.usuario));
+    aplicarFotoAvatar(url);
+    toast('Foto de perfil atualizada!');
+  } catch (err) {
+    toast('Erro ao salvar foto: ' + err.message, 'error');
+  }
+}
+
+function aplicarFotoAvatar(url) {
+  ['sidebar-avatar', 'config-avatar'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.backgroundImage = `url(${url})`;
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+    el.textContent = '';
+  });
+}
+
+async function removerFotoPerfil() {
+  try {
+    await api('DELETE', '/usuarios/' + state.usuario.id + '/foto');
+    state.usuario.foto_url = null;
+    localStorage.setItem('ci_usuario', JSON.stringify(state.usuario));
+    const iniciais = (state.usuario.nome || '').split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
+    ['sidebar-avatar', 'config-avatar'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.backgroundImage = '';
+      el.textContent = iniciais || '--';
+    });
+    document.getElementById('btn-remover-foto').style.display = 'none';
+    toast('Foto removida.');
+  } catch (err) {
+    toast('Erro ao remover foto: ' + err.message, 'error');
+  }
 }
 
 async function trocarSenha() {
@@ -148,7 +190,11 @@ async function iniciarApp() {
   document.getElementById('app').style.display = '';
   const u = state.usuario;
   const iniciais = u.nome.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
-  document.getElementById('sidebar-avatar').textContent = iniciais;
+  if (u.foto_url) {
+    aplicarFotoAvatar('http://localhost:3000' + u.foto_url);
+  } else {
+    document.getElementById('sidebar-avatar').textContent = iniciais;
+  }
   document.getElementById('sidebar-nome').textContent = u.nome;
   await carregarDepartamentos();
   const depto = state.departamentos.find(d => d.id === u.departamento_id);
@@ -211,9 +257,10 @@ async function carregarCIs() {
   try {
     const dept = state.filtroDepartamento ? `&departamento_filtro=${state.filtroDepartamento}` : '';
     const epMap = {
-      recebidas: `/comunicacoes/recebidas?pagina=${state.paginaAtual}&limite=${state.limiteCI}${dept}`,
-      enviadas:  `/comunicacoes/enviadas?pagina=${state.paginaAtual}&limite=${state.limiteCI}${dept}`,
-      minhas:    `/comunicacoes/minhas?pagina=${state.paginaAtual}&limite=${state.limiteCI}${dept}`
+      recebidas:  `/comunicacoes/recebidas?pagina=${state.paginaAtual}&limite=${state.limiteCI}${dept}`,
+      enviadas:   `/comunicacoes/enviadas?pagina=${state.paginaAtual}&limite=${state.limiteCI}${dept}`,
+      minhas:     `/comunicacoes/minhas?pagina=${state.paginaAtual}&limite=${state.limiteCI}${dept}`,
+      arquivadas: `/comunicacoes/arquivadas?pagina=${state.paginaAtual}&limite=${state.limiteCI}`
     };
     const data = await api('GET', epMap[state.abaAtiva]);
     const cis = data.dados || [];
@@ -407,8 +454,8 @@ async function abrirCIDoBackend(id, modoAdmin = false) {
       : `<span style="color:var(--usga-mid);font-weight:600">⬤ ${ci.estado}</span>`;
     document.getElementById('modal-subject').textContent = ci.titulo;
     document.getElementById('modal-body-text').innerHTML = linkificar(ci.descricao);
-    const isAdmin = state.usuario?.cargo_id === 1;
-    document.getElementById('btn-arquivar').style.display = (isAdmin && ci.estado !== 'arquivada') ? '' : 'none';
+    const podeArquivar = state.usuario?.cargo_id <= 2;
+    document.getElementById('btn-arquivar').style.display = (podeArquivar && ci.estado !== 'arquivada') ? '' : 'none';
 
     try {
       const anexosData = await api('GET', '/comunicacoes/' + id + '/anexos');
@@ -732,7 +779,14 @@ function showPage(name) {
     const u = state.usuario;
     const iniciais = (u.nome || '').split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
     const NOMES_CARGO = { 1: 'Administrador Geral', 2: 'Gerente Administrativo', 3: 'Supervisor', 4: 'Funcionário' };
-    document.getElementById('config-avatar').textContent = iniciais || '--';
+    const configAvatar = document.getElementById('config-avatar');
+    if (u.foto_url) {
+      aplicarFotoAvatar('http://localhost:3000' + u.foto_url);
+    } else {
+      configAvatar.style.backgroundImage = '';
+      configAvatar.textContent = iniciais || '--';
+    }
+    document.getElementById('btn-remover-foto').style.display = u.foto_url ? '' : 'none';
     document.getElementById('config-info-nome').textContent = u.nome || '—';
     document.getElementById('config-info-cargo').textContent = NOMES_CARGO[u.cargo_id] || `Cargo ${u.cargo_id}`;
     document.getElementById('config-info-email').textContent = u.email || '—';

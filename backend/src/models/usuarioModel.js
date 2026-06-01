@@ -14,16 +14,21 @@ export const buscarEmail = async (email) => {
 };
 
 export const buscarSenhaEmail = async (email) => {
-  // inclui campo ativo para verificar bloqueio no login
-  const sql = 'SELECT id, nome, email, senha, cargo_id, departamento_id, ativo FROM usuario WHERE email = ?';
+  const sql = 'SELECT id, nome, email, senha, cargo_id, departamento_id, foto_url, ativo FROM usuario WHERE email = ?';
   const [results] = await pool.query(sql, [email]);
   return results[0];
 };
 
 export const buscarId = async (id) => {
-  const sql = 'SELECT id, nome, email, cargo_id, departamento_id, ativo FROM usuario WHERE id = ?';
+  const sql = 'SELECT id, nome, email, cargo_id, departamento_id, foto_url, ativo FROM usuario WHERE id = ?';
   const [results] = await pool.query(sql, [id]);
   return results[0];
+};
+
+export const atualizarFotoUrl = async (id, foto_url) => {
+  const sql = 'UPDATE usuario SET foto_url = ? WHERE id = ?';
+  const [result] = await pool.query(sql, [foto_url, id]);
+  return result;
 };
 
 export const buscarSenhaId = async (id) => {

@@ -19,6 +19,7 @@ CREATE TABLE usuario (
   senha VARCHAR(255) NOT NULL,
   cargo_id INT NOT NULL,
   departamento_id INT NOT NULL,
+  foto_url VARCHAR(255) DEFAULT NULL,
   ativo TINYINT NOT NULL DEFAULT 1, -- 1 = ativo, 0 = inativo (soft delete)
   FOREIGN KEY (cargo_id) REFERENCES cargos(id),
   FOREIGN KEY (departamento_id) REFERENCES departamento(id)

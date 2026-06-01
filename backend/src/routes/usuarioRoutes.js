@@ -1,5 +1,6 @@
 import express from 'express';
 import * as usuarioController from '../controllers/usuarioController.js';
+import { uploadFotoMiddleware } from '../config/upload.js';
 import {
   verificarToken,
   verificarAdmin,
@@ -35,6 +36,10 @@ router.get('/:id', verificarToken, usuarioController.buscarUsuario);
 
 // Trocar senha — só o próprio usuário pode trocar sua senha
 router.put('/:id/senha', verificarToken, verificarProprioOuAdmin, usuarioController.trocarSenhaUsuario);
+
+// Upload e remoção de foto de perfil
+router.post('/:id/foto',   verificarToken, verificarProprioOuAdmin, uploadFotoMiddleware, usuarioController.uploadFotoPerfil);
+router.delete('/:id/foto', verificarToken, verificarProprioOuAdmin, usuarioController.removerFotoPerfil);
 
 // Atualizar usuário — só o próprio usuário ou admin pode editar
 router.put('/:id', verificarToken, verificarProprioOuAdmin, usuarioController.atualizarUsuario);

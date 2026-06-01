@@ -179,6 +179,19 @@ export const listarComunicacaoEnviadas = async (req,res,next) =>{
     }
 };
 
+export const listarCIsArquivadas = async (req, res, next) => {
+  try {
+    const { id: usuario_id, departamento_id } = req.usuario;
+    const pagina = parseInt(req.query.pagina) || 1;
+    const limite = parseInt(req.query.limite) || 20;
+    const [cis, total] = await Promise.all([
+      comunicacaoModel.listarCIsArquivadas(usuario_id, departamento_id, pagina, limite),
+      comunicacaoModel.contarCIsArquivadas(usuario_id, departamento_id)
+    ]);
+    res.status(200).json({ sucesso: true, dados: cis, paginacao: { pagina, limite, total } });
+  } catch (err) { next(err); }
+};
+
 export const arquivarComunicacao = async (req, res, next) =>{
     try{
         const { id } = req.params;

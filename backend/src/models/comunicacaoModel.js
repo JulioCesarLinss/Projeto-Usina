@@ -94,6 +94,29 @@ export const arquivarCI = async (id) => {
   return result;
 };
 
+export const listarCIsArquivadas = async (usuario_id, departamento_id, pagina = 1, limite = 20) => {
+  const offset = (pagina - 1) * limite;
+  const sql = `
+    SELECT c.*, u.nome AS usuario_nome,
+      (SELECT COUNT(*) FROM confirmacao_leitura cl WHERE cl.comunicacao_id = c.id) AS total_lidas,
+      (SELECT COUNT(*) FROM destinatario d WHERE d.comunicacao_id = c.id) AS total_destinatarios
+    FROM comunicacao c
+    INNER JOIN usuario u ON u.id = c.usuario_id
+    WHERE c.estado = 'arquivada'
+      AND (c.usuario_id = ? OR c.departamento_id = ?)
+    ORDER BY c.data_hora DESC
+    LIMIT ? OFFSET ?`;
+  const [results] = await pool.query(sql, [usuario_id, departamento_id, limite, offset]);
+  return results;
+};
+
+export const contarCIsArquivadas = async (usuario_id, departamento_id) => {
+  const sql = `SELECT COUNT(*) AS total FROM comunicacao c
+    WHERE c.estado = 'arquivada' AND (c.usuario_id = ? OR c.departamento_id = ?)`;
+  const [[row]] = await pool.query(sql, [usuario_id, departamento_id]);
+  return row.total;
+};
+
 // listarMinhasCIs — histórico completo: todas as CIs enviadas ou recebidas pelo usuário
 export const listarMinhasCIs = async (usuario_id, departamento_id, pagina = 1, limite = 20, filtro_departamento_id = null) => {
   const offset = (pagina - 1) * limite;

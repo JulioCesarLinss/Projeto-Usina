@@ -1,6 +1,9 @@
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { AppError } from '../utils/appError.js';
+
+fs.mkdirSync('uploads/fotos', { recursive: true });
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 const MAX_FILENAME_LENGTH = 120;
@@ -98,3 +101,21 @@ export const loginRateLimiter = (req, res, next) => {
 export const uploadRateLimit = rateLimiter({ windowMs: 1 * 60 * 1000, max: 20 });
 
 export default upload;
+
+const uploadFoto = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, 'uploads/fotos'),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `foto-${req.params.id}-${Date.now()}${ext}`);
+    }
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.mimetype)) {
+      return cb(new AppError('Apenas JPG e PNG são permitidos', 400, 'upload', 'TIPO_INVALIDO'));
+    }
+    cb(null, true);
+  }
+});
+export const uploadFotoMiddleware = uploadFoto.single('foto');

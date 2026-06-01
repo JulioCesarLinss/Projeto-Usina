@@ -1,6 +1,6 @@
 import express from 'express';
 import * as comunicacaoController from '../controllers/comunicacaoController.js';
-import { verificarToken, verificarAdmin } from '../middlewares/authMiddleware.js';
+import { verificarToken, verificarAdmin, verificarGerente } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
@@ -12,8 +12,8 @@ router.get('/buscar', verificarToken, comunicacaoController.buscarCIsComFiltros)
 router.get('/minhas', verificarToken, comunicacaoController.listarMinhasCIs);
 router.get('/rascunhos', verificarToken, comunicacaoController.listarRascunhos);
 router.put('/:id', verificarToken, comunicacaoController.atualizarCI);
-// arquivar é exclusivo do administrador geral
-router.post('/:id/arquivar', verificarToken, verificarAdmin, comunicacaoController.arquivarComunicacao);
+router.get('/arquivadas', verificarToken, comunicacaoController.listarCIsArquivadas);
+router.post('/:id/arquivar', verificarToken, verificarGerente, comunicacaoController.arquivarComunicacao);
 router.get('/:id/anexos', verificarToken, comunicacaoController.listarAnexosCI);
 router.get('/:id/destinatarios', verificarToken, comunicacaoController.listarDestinatariosCI);
 router.get('/:id', verificarToken, comunicacaoController.buscarCIporID);

@@ -367,6 +367,24 @@ export const atualizarUsuario = async (req, res, next) => {
   }
 };
 
+export const removerFotoPerfil = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await usuarioModel.atualizarFotoUrl(id, null);
+    res.status(200).json({ sucesso: true, mensagem: 'Foto removida' });
+  } catch (err) { next(err); }
+};
+
+export const uploadFotoPerfil = async (req, res, next) => {
+  try {
+    if (!req.file) throw new ValidationError('Nenhuma foto enviada', 'FOTO_AUSENTE', []);
+    const { id } = req.params;
+    const foto_url = `/uploads/fotos/${req.file.filename}`;
+    await usuarioModel.atualizarFotoUrl(id, foto_url);
+    res.status(200).json({ sucesso: true, dados: { foto_url } });
+  } catch (err) { next(err); }
+};
+
 export const trocarSenhaUsuario = async (req, res, next) => {
   try {
     const { id } = req.params;
