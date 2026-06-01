@@ -40,7 +40,7 @@ export const buscarSenhaId = async (id) => {
 export const listarUsuarios = async (pagina = 1, limite = 20) => {
   const offset = (pagina - 1) * limite;
   // filtra apenas usuários ativos
-  const sql = 'SELECT id, nome, email, cargo_id, departamento_id, ativo FROM usuario WHERE ativo = 1 LIMIT ? OFFSET ?';
+  const sql = 'SELECT id, nome, email, cargo_id, departamento_id, foto_url, ativo FROM usuario WHERE ativo = 1 LIMIT ? OFFSET ?';
   const [results] = await pool.query(sql, [limite, offset]);
   return results;
 };

@@ -9,7 +9,7 @@ export const criarComunicacao = async (titulo, data_hora, estado, descricao, usu
 export const buscarCIporID = async (id) => {
   const sql = `
     SELECT c.id, c.titulo, c.data_hora, c.estado, c.descricao, c.usuario_id, c.departamento_id,
-           u.nome AS usuario_nome
+           u.nome AS usuario_nome, u.foto_url AS usuario_foto
     FROM comunicacao c
     INNER JOIN usuario u ON c.usuario_id = u.id
     WHERE c.id = ?`;

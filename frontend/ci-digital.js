@@ -328,7 +328,7 @@ function renderizarLinhaCI(ci) {
   return `<tr onclick="abrirCIDoBackend(${ci.id})" style="cursor:pointer">
     <td><span class="priority-dot medium"></span></td>
     <td><span class="ci-num">CI-${String(ci.id).padStart(4,'0')}</span></td>
-    <td class="ci-subject">${ci.titulo}<small>${ci.estado} · ${data}</small></td>
+    <td class="ci-subject">${ci.titulo}<small>${ci.usuario_id === state.usuario?.id ? 'enviada' : 'recebida'} · ${data}</small></td>
     <td><span class="dept-tag"><i class="ti ti-building" style="font-size:11px"></i> ${nomeDepto}</span></td>
     <td>${statusLabel}</td>
     <td class="ci-date">${data}</td>
@@ -425,7 +425,19 @@ async function abrirCIDoBackend(id, modoAdmin = false) {
     const nomeDeptoRemetente = deptoRemetente
       ? (NOMES_DEPT[deptoRemetente.nome.toUpperCase()] || deptoRemetente.nome)
       : `Depto. ${ci.departamento_id}`;
-    document.getElementById('modal-from').textContent = `${ci.usuario_nome || 'Usuário ' + ci.usuario_id} · ${nomeDeptoRemetente}`;
+    const fotoUrl = ci.usuario_foto ? `http://localhost:3000${ci.usuario_foto}` : null;
+    const nomeRem = ci.usuario_nome || `Usuário ${ci.usuario_id}`;
+    const iniciaisRem = nomeRem.split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
+    document.getElementById('modal-from').innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:38px;height:38px;border-radius:50%;background:var(--usga-mid);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;overflow:hidden;${fotoUrl ? `background-image:url(${fotoUrl});background-size:cover;background-position:center` : ''}">
+          ${fotoUrl ? '' : iniciaisRem}
+        </div>
+        <div>
+          <div style="font-weight:500">${nomeRem}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:1px">${nomeDeptoRemetente}</div>
+        </div>
+      </div>`;
 
     // busca destinatários para exibir nomes reais
     try {
@@ -1229,7 +1241,7 @@ function renderizarUsuariosCA(usuarios) {
         return `<tr>
           <td>
             <div style="display:flex;align-items:center;gap:12px">
-              <div style="width:36px;height:36px;border-radius:50%;background:var(--usga-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0">${iniciais}</div>
+              <div style="width:36px;height:36px;border-radius:50%;background:var(--usga-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;${u.foto_url ? `background-image:url(http://localhost:3000${u.foto_url});background-size:cover;background-position:center` : ''}">${u.foto_url ? '' : iniciais}</div>
               <div>
                 <div style="font-weight:500;font-size:13.5px;color:var(--text-primary)">${u.nome}</div>
                 <div style="font-size:11px;color:var(--text-muted)">${u.email}</div>
