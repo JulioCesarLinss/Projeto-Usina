@@ -1056,6 +1056,12 @@ body.dark .tab-search-wrap:focus-within { background: #1E2E14; }
   padding: 9px 12px; font-size: 13px;
   margin-bottom: 14px; display: none;
 }
+.login-success {
+  background: #DCFCE7; border: 1px solid #86EFAC;
+  color: #166534; border-radius: var(--radius);
+  padding: 9px 12px; font-size: 13px;
+  margin-bottom: 14px; display: none;
+}
 
 /* ── LOADING SPINNER ── */
 .spin {

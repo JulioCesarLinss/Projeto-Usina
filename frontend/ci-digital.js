@@ -83,6 +83,176 @@ async function fazerLogin() {
   }
 }
 
+const forgotState = {
+  expiresAt: null,
+  timerId: null
+};
+
+function mostrarEsqueciSenha() {
+  document.getElementById('login-panel').style.display = 'none';
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('forgot-panel').style.display = 'block';
+  document.getElementById('forgot-code-section').style.display = 'none';
+  document.getElementById('forgot-reset-section').style.display = 'none';
+  document.getElementById('forgot-status').style.display = 'none';
+  document.getElementById('forgot-email').value = '';
+  document.getElementById('forgot-code').value = '';
+  document.getElementById('forgot-new-password').value = '';
+  document.getElementById('forgot-confirm-password').value = '';
+  document.getElementById('forgot-verify-btn').disabled = true;
+  document.getElementById('forgot-reset-btn').disabled = true;
+  clearInterval(forgotState.timerId);
+  forgotState.expiresAt = null;
+}
+
+function mostrarLogin() {
+  document.getElementById('login-panel').style.display = 'block';
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('forgot-panel').style.display = 'none';
+  clearInterval(forgotState.timerId);
+  forgotState.expiresAt = null;
+}
+
+function mostrarForgotStatus(message, type = 'error') {
+  const status = document.getElementById('forgot-status');
+  status.textContent = message;
+  status.style.display = message ? 'block' : 'none';
+  status.style.background = type === 'success' ? '#DCFCE7' : '#FEE2E2';
+  status.style.borderColor = type === 'success' ? '#86EFAC' : '#FCA5A5';
+  status.style.color = type === 'success' ? '#166534' : '#B91C1C';
+}
+
+function atualizarBotaoVerificarCodigo() {
+  const codigo = document.getElementById('forgot-code').value.trim();
+  const btn = document.getElementById('forgot-verify-btn');
+  btn.disabled = codigo.length !== 8 || !forgotState.expiresAt || new Date() > forgotState.expiresAt;
+}
+
+function validarSenhaRecuperacao() {
+  const senha = document.getElementById('forgot-new-password').value;
+  const confirmar = document.getElementById('forgot-confirm-password').value;
+  const error = document.getElementById('forgot-match-error');
+  const btn = document.getElementById('forgot-reset-btn');
+
+  if (!senha || !confirmar) {
+    error.style.display = 'none';
+    btn.disabled = true;
+    return;
+  }
+
+  if (senha !== confirmar) {
+    error.textContent = 'Senhas diferentes uma da outra tente novamente';
+    error.style.display = 'block';
+    btn.disabled = true;
+    return;
+  }
+
+  error.style.display = 'none';
+  btn.disabled = senha.length < 8;
+}
+
+function atualizarTimer() {
+  const timer = document.getElementById('forgot-timer');
+  if (!forgotState.expiresAt) {
+    timer.textContent = 'Código inválido ou não enviado ainda.';
+    return;
+  }
+
+  const remaining = Math.max(0, forgotState.expiresAt - new Date());
+  const minutes = String(Math.floor(remaining / 60000)).padStart(2, '0');
+  const seconds = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
+  timer.textContent = `Código válido por ${minutes}:${seconds}`;
+
+  if (remaining <= 0) {
+    clearInterval(forgotState.timerId);
+    document.getElementById('forgot-verify-btn').disabled = true;
+    timer.textContent = 'Código expirou. Solicite um novo código.';
+  }
+}
+
+async function enviarCodigoRecuperacao() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const sendBtn = document.getElementById('forgot-send-btn');
+  mostrarForgotStatus('', 'error');
+
+  if (!email) {
+    mostrarForgotStatus('Digite o e-mail da conta para enviar o código.', 'error');
+    return;
+  }
+
+  sendBtn.disabled = true;
+  sendBtn.textContent = 'Enviando...';
+
+  try {
+    await api('POST', '/usuarios/recuperar-senha', { email });
+    forgotState.expiresAt = new Date(Date.now() + 4 * 60 * 1000);
+    document.getElementById('forgot-code-section').style.display = 'block';
+    document.getElementById('forgot-reset-section').style.display = 'none';
+    document.getElementById('forgot-code').value = '';
+    document.getElementById('forgot-new-password').value = '';
+    document.getElementById('forgot-confirm-password').value = '';
+    atualizarBotaoVerificarCodigo();
+    validarSenhaRecuperacao();
+    mostrarForgotStatus('Código enviado. Verifique seu e-mail e digite o código em até 4 minutos.', 'success');
+    clearInterval(forgotState.timerId);
+    atualizarTimer();
+    forgotState.timerId = setInterval(atualizarTimer, 1000);
+  } catch (err) {
+    mostrarForgotStatus(err.message || 'Erro ao enviar código.', 'error');
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = 'Confirmar';
+  }
+}
+
+async function validarCodigoRecuperacao() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const codigo = document.getElementById('forgot-code').value.trim();
+  const btn = document.getElementById('forgot-verify-btn');
+
+  mostrarForgotStatus('', 'error');
+  btn.disabled = true;
+  btn.textContent = 'Verificando...';
+
+  try {
+    await api('POST', '/usuarios/recuperar-senha/validar', { email, codigo });
+    document.getElementById('forgot-reset-section').style.display = 'block';
+    mostrarForgotStatus('Código validado. Agora escolha sua nova senha.', 'success');
+  } catch (err) {
+    mostrarForgotStatus(err.message || 'Código inválido.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Verificar código';
+    atualizarBotaoVerificarCodigo();
+  }
+}
+
+async function resetarSenha() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const codigo = document.getElementById('forgot-code').value.trim();
+  const senhaNova = document.getElementById('forgot-new-password').value;
+  const btn = document.getElementById('forgot-reset-btn');
+
+  mostrarForgotStatus('', 'error');
+  btn.disabled = true;
+  btn.textContent = 'Alterando...';
+
+  try {
+    await api('POST', '/usuarios/recuperar-senha/confirmar', { email, codigo, senhaNova });
+    mostrarLogin();
+    document.getElementById('login-email').value = email;
+    document.getElementById('login-senha').value = '';
+    const errElLogin = document.getElementById('login-error');
+    errElLogin.textContent = 'Senha alterada com sucesso. Faça login com a nova senha.';
+    errElLogin.style.display = 'block';
+  } catch (err) {
+    mostrarForgotStatus(err.message || 'Erro ao alterar senha.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Continuar';
+  }
+}
+
+
 // ═══════════════════════════════════════════════════════
 //  CONFIGURAÇÕES
 // ═══════════════════════════════════════════════════════

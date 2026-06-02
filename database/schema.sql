@@ -88,3 +88,12 @@ CREATE TABLE logs_sistema(
   FOREIGN KEY (usuario_id) REFERENCES usuario(id),
   FOREIGN KEY (comunicacao_id) REFERENCES comunicacao(id)
 );
+
+CREATE TABLE recuperacao_senha (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  usuario_id INT NOT NULL,
+  codigo VARCHAR(8) NOT NULL,
+  expira_em DATETIME NOT NULL,
+  criado_em DATETIME NOT NULL,
+  FOREIGN KEY (usuario_id) REFERENCES usuario(id)
+);

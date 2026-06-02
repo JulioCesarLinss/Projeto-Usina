@@ -12,6 +12,7 @@ import {
 
 import { revogarToken } from '../middlewares/authMiddleware.js';
 import { registrarLog, getClientIP } from '../middlewares/auditMiddleware.js';
+import * as emailService from '../services/emailService.js';
 
 export const cadastrarUsuario = async (req, res, next) => {
   try {
@@ -405,6 +406,90 @@ export const trocarSenhaUsuario = async (req, res, next) => {
 
     const senhaHash = await bcrypt.hash(senhaNova, 12);
     await usuarioModel.atualizarSenha(id, senhaHash);
+
+    res.status(200).json({ sucesso: true, mensagem: 'Senha alterada com sucesso' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const enviarCodigoRecuperacao = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      throw new ValidationError('Email é obrigatório', 'EMAIL_OBRIGATORIO', []);
+    }
+
+    const usuario = await usuarioModel.buscarEmail(email);
+    if (!usuario) {
+      throw new NotFoundError('Email não consta no sistema', 'EMAIL_NAO_ENCONTRADO');
+    }
+
+    const codigo = String(Math.floor(10000000 + Math.random() * 90000000));
+    const expiraEm = new Date(Date.now() + 4 * 60 * 1000);
+
+    await usuarioModel.salvarCodigoRecuperacao(usuario.id, codigo, expiraEm);
+    await emailService.sendPasswordResetCode(email, codigo);
+
+    res.status(200).json({ sucesso: true, mensagem: 'Código enviado para o seu e-mail. Ele é válido por 4 minutos.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const validarCodigoRecuperacao = async (req, res, next) => {
+  try {
+    const { email, codigo } = req.body;
+
+    if (!email || !codigo) {
+      throw new ValidationError('Email e código são obrigatórios', 'CAMPOS_OBRIGATORIOS', []);
+    }
+
+    const registro = await usuarioModel.buscarRecuperacaoPorEmail(email);
+    if (!registro || registro.codigo !== String(codigo).trim()) {
+      throw new AuthenticationError('Código inválido ou email incorreto', 'CODIGO_INVALIDO');
+    }
+
+    if (new Date(registro.expira_em) < new Date()) {
+      throw new AuthenticationError('Código expirado', 'CODIGO_EXPIRADO');
+    }
+
+    res.status(200).json({ sucesso: true, mensagem: 'Código validado com sucesso' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resetarSenhaRecuperacao = async (req, res, next) => {
+  try {
+    const { email, codigo, senhaNova } = req.body;
+
+    if (!email || !codigo || !senhaNova) {
+      throw new ValidationError('Email, código e nova senha são obrigatórios', 'CAMPOS_OBRIGATORIOS', []);
+    }
+
+    if (senhaNova.length < 8) {
+      throw new ValidationError('A nova senha deve ter no mínimo 8 caracteres', 'SENHA_CURTA', []);
+    }
+
+    const usuario = await usuarioModel.buscarEmail(email);
+    if (!usuario) {
+      throw new NotFoundError('Email não consta no sistema', 'EMAIL_NAO_ENCONTRADO');
+    }
+
+    const registro = await usuarioModel.buscarRecuperacaoPorUsuarioId(usuario.id);
+    if (!registro || registro.codigo !== String(codigo).trim()) {
+      throw new AuthenticationError('Código inválido ou email incorreto', 'CODIGO_INVALIDO');
+    }
+
+    if (new Date(registro.expira_em) < new Date()) {
+      throw new AuthenticationError('Código expirado', 'CODIGO_EXPIRADO');
+    }
+
+    const senhaHash = await bcrypt.hash(senhaNova, 12);
+    await usuarioModel.atualizarSenha(usuario.id, senhaHash);
+    await usuarioModel.excluirRecuperacaoPorUsuarioId(usuario.id);
 
     res.status(200).json({ sucesso: true, mensagem: 'Senha alterada com sucesso' });
   } catch (err) {

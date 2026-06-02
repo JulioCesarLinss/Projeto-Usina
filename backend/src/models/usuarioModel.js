@@ -37,6 +37,38 @@ export const buscarSenhaId = async (id) => {
   return results[0];
 };
 
+export const salvarCodigoRecuperacao = async (usuario_id, codigo, expira_em) => {
+  await pool.query('DELETE FROM recuperacao_senha WHERE usuario_id = ?', [usuario_id]);
+  const sql = 'INSERT INTO recuperacao_senha (usuario_id, codigo, expira_em, criado_em) VALUES (?, ?, ?, NOW())';
+  const [result] = await pool.query(sql, [usuario_id, codigo, expira_em]);
+  return result;
+};
+
+export const buscarRecuperacaoPorEmail = async (email) => {
+  const sql = `
+    SELECT r.id, r.codigo, r.expira_em, u.id AS usuario_id
+    FROM recuperacao_senha r
+    JOIN usuario u ON u.id = r.usuario_id
+    WHERE u.email = ?
+    ORDER BY r.criado_em DESC
+    LIMIT 1
+  `;
+  const [results] = await pool.query(sql, [email]);
+  return results[0];
+};
+
+export const buscarRecuperacaoPorUsuarioId = async (usuario_id) => {
+  const sql = 'SELECT id, codigo, expira_em FROM recuperacao_senha WHERE usuario_id = ? ORDER BY criado_em DESC LIMIT 1';
+  const [results] = await pool.query(sql, [usuario_id]);
+  return results[0];
+};
+
+export const excluirRecuperacaoPorUsuarioId = async (usuario_id) => {
+  const sql = 'DELETE FROM recuperacao_senha WHERE usuario_id = ?';
+  const [result] = await pool.query(sql, [usuario_id]);
+  return result;
+};
+
 export const listarUsuarios = async (pagina = 1, limite = 20) => {
   const offset = (pagina - 1) * limite;
   // filtra apenas usuários ativos

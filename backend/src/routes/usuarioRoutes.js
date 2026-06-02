@@ -15,6 +15,9 @@ const router = express.Router();
 
 // Login — tem rate limit, máximo 5 tentativas a cada 15 minutos
 router.post('/login', loginRateLimiter, usuarioController.login);
+router.post('/recuperar-senha', loginRateLimiter, usuarioController.enviarCodigoRecuperacao);
+router.post('/recuperar-senha/validar', loginRateLimiter, usuarioController.validarCodigoRecuperacao);
+router.post('/recuperar-senha/confirmar', loginRateLimiter, usuarioController.resetarSenhaRecuperacao);
 
 // ==================== ROTAS AUTENTICADAS ====================
 // Só acessa quem estiver logado com token válido
