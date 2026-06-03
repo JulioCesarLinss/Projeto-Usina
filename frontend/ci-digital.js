@@ -1440,7 +1440,10 @@ function renderizarUsuariosCA(usuarios) {
             <div style="display:flex;align-items:center;gap:12px">
               <div style="width:36px;height:36px;border-radius:50%;background:var(--usga-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;${u.foto_url ? `background-image:url(http://localhost:3000${u.foto_url});background-size:cover;background-position:center` : ''}">${u.foto_url ? '' : iniciais}</div>
               <div>
-                <div style="font-weight:500;font-size:13.5px;color:var(--text-primary)">${u.nome}</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span id="ca-nome-label-${u.id}" style="font-weight:500;font-size:13.5px;color:var(--text-primary)">${u.nome}</span>
+                  <button class="btn-ghost" style="padding:2px 5px;font-size:11px;color:var(--text-muted)" onclick="editarNomeCA(${u.id},'${u.nome.replace(/'/g,"\\'")}')"><i class="ti ti-pencil" style="font-size:12px"></i></button>
+                </div>
                 <div style="font-size:11px;color:var(--text-muted)">${u.email}</div>
               </div>
             </div>
@@ -1483,6 +1486,50 @@ function confirmarInativarCA(id, nome) {
         Não
       </button>
     </div>`;
+}
+
+function editarNomeCA(id, nomeAtual) {
+  const label = document.getElementById(`ca-nome-label-${id}`);
+  if (!label) return;
+  const parent = label.parentElement;
+  parent.innerHTML = `
+    <input id="ca-nome-input-${id}" type="text" value="${nomeAtual.replace(/"/g,'&quot;')}"
+      style="font-size:13.5px;font-weight:500;padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text-primary);width:160px;font-family:var(--font-body)">
+    <button onclick="salvarNomeCA(${id})" style="background:var(--usga-mid);color:white;border:none;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;font-family:inherit">Salvar</button>
+    <button onclick="carregarListaUsuariosCA()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--text-mid)">✕</button>`;
+  document.getElementById(`ca-nome-input-${id}`)?.focus();
+}
+
+async function salvarNomeCA(id) {
+  const input = document.getElementById(`ca-nome-input-${id}`);
+  const novoNome = input?.value.trim();
+  if (!novoNome) { toast('Nome não pode ser vazio.', 'error'); return; }
+  const u = caUsuariosTodos.find(u => u.id === id);
+  if (!u) return;
+  try {
+    await api('PUT', `/usuarios/${id}`, {
+      nome: novoNome,
+      email: u.email,
+      cargo_id: u.cargo_id,
+      departamento_id: u.departamento_id
+    });
+    // se alterou o próprio nome, atualiza sidebar e sessão imediatamente
+    if (id === state.usuario?.id) {
+      state.usuario.nome = novoNome;
+      localStorage.setItem('ci_usuario', JSON.stringify(state.usuario));
+      document.getElementById('sidebar-nome').textContent = novoNome;
+      const iniciais = novoNome.split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
+      if (!state.usuario.foto_url) {
+        document.getElementById('sidebar-avatar').textContent = iniciais;
+        const ca = document.getElementById('config-avatar');
+        if (ca && !ca.style.backgroundImage) ca.textContent = iniciais;
+      }
+    }
+    toast('Nome atualizado com sucesso!');
+    await carregarListaUsuariosCA();
+  } catch (err) {
+    toast('Erro ao atualizar nome: ' + err.message, 'error');
+  }
 }
 
 async function inativarUsuarioCA(id, nome) {
@@ -1608,15 +1655,15 @@ function renderizarGraficoPorDepto(depts) {
   criarOuAtualizarChart('chart-por-depto', 'bar', {
     labels,
     datasets: [
-      { label: 'Enviadas',  data: depts.map(d => d.enviadas),  backgroundColor: dark ? '#43931F' : '#1B5E20', borderRadius: 4 },
-      { label: 'Recebidas', data: depts.map(d => d.recebidas), backgroundColor: dark ? '#7AB260' : '#1976D2', borderRadius: 4 }
+      { label: 'Enviadas',  data: depts.map(d => d.enviadas),  backgroundColor: dark ? '#22C55E' : '#1B5E20', borderRadius: 4 },
+      { label: 'Recebidas', data: depts.map(d => d.recebidas), backgroundColor: dark ? '#3B82F6' : '#1976D2', borderRadius: 4 }
     ]
   }, {
     responsive: false,
-    plugins: { legend: { labels: { color: dark ? '#9AB882' : '#3D5C2A', font: { family: 'DM Sans' } } } },
+    plugins: { legend: { labels: { color: dark ? '#A5B5A5' : '#3D5C2A', font: { family: 'DM Sans' } } } },
     scales: {
-      x: { ticks: { color: dark ? '#9AB882' : '#6B8C58', maxRotation: 0, minRotation: 0 }, grid: { color: dark ? '#1E2E14' : '#E8F2E0' } },
-      y: { ticks: { color: dark ? '#9AB882' : '#6B8C58', stepSize: 1 }, grid: { color: dark ? '#1E2E14' : '#E8F2E0' }, beginAtZero: true }
+      x: { ticks: { color: dark ? '#A5B5A5' : '#6B8C58', maxRotation: 0, minRotation: 0 }, grid: { color: dark ? 'rgba(255,255,255,0.08)' : '#E8F2E0' } },
+      y: { ticks: { color: dark ? '#A5B5A5' : '#6B8C58', stepSize: 1 }, grid: { color: dark ? 'rgba(255,255,255,0.08)' : '#E8F2E0' }, beginAtZero: true }
     }
   });
 }
@@ -1627,15 +1674,15 @@ function renderizarGraficoTaxaLeitura(depts) {
   criarOuAtualizarChart('chart-taxa-leitura', 'bar', {
     labels,
     datasets: [
-      { label: 'Lidas',     data: depts.map(d => d.lidas),    backgroundColor: dark ? '#43931F' : '#388E3C', borderRadius: 4 },
-      { label: 'Pendentes', data: depts.map(d => d.pendentes), backgroundColor: dark ? '#F0C050' : '#F9A825', borderRadius: 4 }
+      { label: 'Lidas',     data: depts.map(d => d.lidas),    backgroundColor: dark ? '#10B981' : '#388E3C', borderRadius: 4 },
+      { label: 'Pendentes', data: depts.map(d => d.pendentes), backgroundColor: dark ? '#F59E0B' : '#F9A825', borderRadius: 4 }
     ]
   }, {
     responsive: false,
-    plugins: { legend: { labels: { color: dark ? '#9AB882' : '#3D5C2A', font: { family: 'DM Sans' } } } },
+    plugins: { legend: { labels: { color: dark ? '#A5B5A5' : '#3D5C2A', font: { family: 'DM Sans' } } } },
     scales: {
-      x: { stacked: true, ticks: { color: dark ? '#9AB882' : '#6B8C58', maxRotation: 0, minRotation: 0 }, grid: { color: dark ? '#1E2E14' : '#E8F2E0' } },
-      y: { stacked: true, ticks: { color: dark ? '#9AB882' : '#6B8C58', stepSize: 1 }, grid: { color: dark ? '#1E2E14' : '#E8F2E0' }, beginAtZero: true }
+      x: { stacked: true, ticks: { color: dark ? '#A5B5A5' : '#6B8C58', maxRotation: 0, minRotation: 0 }, grid: { color: dark ? 'rgba(255,255,255,0.08)' : '#E8F2E0' } },
+      y: { stacked: true, ticks: { color: dark ? '#A5B5A5' : '#6B8C58', stepSize: 1 }, grid: { color: dark ? 'rgba(255,255,255,0.08)' : '#E8F2E0' }, beginAtZero: true }
     }
   });
 }
@@ -1661,10 +1708,10 @@ function renderizarGraficoEvolucao(dados) {
     }]
   }, {
     responsive: false,
-    plugins: { legend: { labels: { color: dark ? '#9AB882' : '#3D5C2A', font: { family: 'DM Sans' } } } },
+    plugins: { legend: { labels: { color: dark ? '#A5B5A5' : '#3D5C2A', font: { family: 'DM Sans' } } } },
     scales: {
-      x: { ticks: { color: dark ? '#9AB882' : '#6B8C58' }, grid: { color: dark ? '#1E2E14' : '#E8F2E0' } },
-      y: { ticks: { color: dark ? '#9AB882' : '#6B8C58', stepSize: 1 }, grid: { color: dark ? '#1E2E14' : '#E8F2E0' }, beginAtZero: true }
+      x: { ticks: { color: dark ? '#A5B5A5' : '#6B8C58' }, grid: { color: dark ? 'rgba(255,255,255,0.08)' : '#E8F2E0' } },
+      y: { ticks: { color: dark ? '#A5B5A5' : '#6B8C58', stepSize: 1 }, grid: { color: dark ? 'rgba(255,255,255,0.08)' : '#E8F2E0' }, beginAtZero: true }
     }
   });
 }
