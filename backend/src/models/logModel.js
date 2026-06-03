@@ -6,6 +6,7 @@ export const listarLogs = async ({
   usuario_id,
   departamento_id,
   acao,
+  nome,
   data_inicio,
   data_fim,
   pagina = 1,
@@ -20,7 +21,6 @@ export const listarLogs = async ({
     params.push(usuario_id);
   }
 
-  // restrição de departamento para supervisores
   if (departamento_id) {
     conditions.push('u.departamento_id = ?');
     params.push(departamento_id);
@@ -29,6 +29,11 @@ export const listarLogs = async ({
   if (acao) {
     conditions.push('l.acao_realizada LIKE ?');
     params.push(`%${acao}%`);
+  }
+
+  if (nome) {
+    conditions.push('u.nome LIKE ?');
+    params.push(`%${nome}%`);
   }
 
   if (data_inicio) {
@@ -64,13 +69,14 @@ export const listarLogs = async ({
 };
 
 // contarLogs — retorna o total de registros para paginação correta no frontend.
-export const contarLogs = async ({ usuario_id, departamento_id, acao, data_inicio, data_fim }) => {
+export const contarLogs = async ({ usuario_id, departamento_id, acao, nome, data_inicio, data_fim }) => {
   const conditions = [];
   const params = [];
 
   if (usuario_id) { conditions.push('l.usuario_id = ?'); params.push(usuario_id); }
   if (departamento_id) { conditions.push('u.departamento_id = ?'); params.push(departamento_id); }
   if (acao) { conditions.push('l.acao_realizada LIKE ?'); params.push(`%${acao}%`); }
+  if (nome) { conditions.push('u.nome LIKE ?'); params.push(`%${nome}%`); }
   if (data_inicio) { conditions.push('l.data_hora >= ?'); params.push(data_inicio); }
   if (data_fim) { conditions.push('l.data_hora <= ?'); params.push(data_fim + ' 23:59:59'); }
 

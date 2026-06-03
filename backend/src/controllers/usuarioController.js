@@ -164,7 +164,8 @@ export const login = async (req, res, next) => {
           nome: usuario.nome,
           email: usuario.email,
           cargo_id: usuario.cargo_id,
-          departamento_id: usuario.departamento_id
+          departamento_id: usuario.departamento_id,
+          foto_url: usuario.foto_url || null
         }
       }
     });

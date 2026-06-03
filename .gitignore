@@ -29,3 +29,9 @@ Thumbs.db
 .env.development.local
 
 database/cigital.sql
+
+# Arquivos enviados por usuários (uploads de CI e fotos de perfil)
+backend/uploads/
+
+# Fotos das usinas (imagens locais, não versionar)
+frontend/fotos_usinas/

@@ -16,17 +16,15 @@
 <div id="toast-container"></div>
 
 <!-- LOGIN SCREEN -->
-<div id="login-screen">
+<div id="login-screen" style="background-image:url('fotos_usinas/Meio_Ambiente.jpg');background-size:cover;background-position:center">
   <div class="login-card">
     <div class="login-brand">
-      <svg viewBox="0 0 120 34" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="12,2 22,2 30,10 22,18 12,18 4,10" fill="#43931F"/>
-        <polygon points="32,2 42,2 50,10 42,18 32,18 24,10" fill="#7AB260"/>
-        <text x="56" y="14" font-family="'DM Serif Display',serif" font-size="15" fill="#2D6A10" font-weight="700">USGA</text>
-        <text x="56" y="25" font-family="'DM Sans',sans-serif" font-size="7.5" fill="#5A8A40" letter-spacing="0.5">USINA &amp; GRUPO</text>
-      </svg>
+      <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-bottom:8px">
+        <img src="fotos_usinas/USGA.png" alt="USGA" style="height:48px;object-fit:contain">
+        <img src="fotos_usinas/Trapiche.png" alt="Usina Trapiche" style="height:48px;object-fit:contain;margin-bottom:6px">
+      </div>
       <h1>C.I Digital</h1>
-      <p>Comunicação Interna · Usina Trapiche</p>
+      <p>Comunicação Interna</p>
     </div>
     <div id="login-error" class="login-error"></div>
 
@@ -100,15 +98,13 @@
 <aside class="sidebar">
   <div class="sidebar-brand">
     <div class="brand-logos">
-      <div class="brand-logo-usga">
-        <svg viewBox="0 0 120 34" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="12,2 22,2 30,10 22,18 12,18 4,10" fill="#43931F"/>
-          <polygon points="32,2 42,2 50,10 42,18 32,18 24,10" fill="#7AB260"/>
-          <text x="56" y="14" font-family="'DM Serif Display',serif" font-size="15" fill="#2D6A10" font-weight="700">USGA</text>
-          <text x="56" y="25" font-family="'DM Sans',sans-serif" font-size="7.5" fill="#5A8A40" letter-spacing="0.5">USINA &amp; GRUPO</text>
-        </svg>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+        <div style="background:white;border-radius:4px;padding:2px 6px;display:flex;align-items:center;justify-content:center;gap:6px">
+          <img src="fotos_usinas/USGA.png" alt="USGA" style="height:14px;object-fit:contain">
+          <img src="fotos_usinas/Trapiche.png" alt="Trapiche" style="height:14px;object-fit:contain">
+        </div>
+        <div class="brand-logo-trap">Grupo Serra Grande</div>
       </div>
-      <div class="brand-logo-trap">TRAPICHE · RECIFE PE</div>
     </div>
     <div class="brand-system">
       <div class="brand-name">C.I Digital</div>
@@ -128,7 +124,7 @@
     <div class="nav-label">Principal</div>
     <div class="nav-item active" onclick="showPage('dashboard')">
       <i class="ti ti-layout-dashboard"></i>
-      Dashboard
+      Tela Inicial
     </div>
     <div class="nav-item" onclick="showPage('nova')">
       <i class="ti ti-send"></i>
@@ -350,7 +346,7 @@
           <div class="upload-area" id="upload-area" onclick="document.getElementById('ci-arquivo').click()">
             <i class="ti ti-cloud-upload"></i>
             <p><strong>Clique para selecionar</strong> ou arraste arquivos aqui</p>
-            <p id="upload-label">PDF, DOCX, XLSX, PNG — máx. 20 MB por arquivo</p>
+            <p id="upload-label">PDF, DOCX, XLSX, PNG, JPG — máx. 20 MB por arquivo</p>
           </div>
           <input type="file" id="ci-arquivo" style="display:none" accept=".pdf,.docx,.xlsx,.png,.jpg" onchange="atualizarNomeArquivo()">
         </div>
@@ -424,15 +420,15 @@
           <p style="font-size:13px;color:var(--text-muted);line-height:1.5">Altere sua senha de acesso. Use no mínimo 8 caracteres combinando letras e números.</p>
           <div class="form-group" style="margin:0">
             <label>Senha atual</label>
-            <input type="password" id="config-senha-atual" placeholder="Digite sua senha atual">
+            <input type="password" id="config-senha-atual" placeholder="Digite sua senha atual" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;font-size:13.5px;font-family:var(--font-body);width:100%;outline:none;color:var(--text-primary)">
           </div>
           <div class="form-group" style="margin:0">
             <label>Nova senha</label>
-            <input type="password" id="config-senha-nova" placeholder="Mínimo 8 caracteres">
+            <input type="password" id="config-senha-nova" placeholder="Mínimo 8 caracteres" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;font-size:13.5px;font-family:var(--font-body);width:100%;outline:none;color:var(--text-primary)">
           </div>
           <div class="form-group" style="margin:0">
             <label>Confirmar nova senha</label>
-            <input type="password" id="config-senha-confirmar" placeholder="Repita a nova senha">
+            <input type="password" id="config-senha-confirmar" placeholder="Repita a nova senha" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;font-size:13.5px;font-family:var(--font-body);width:100%;outline:none;color:var(--text-primary)">
           </div>
           <button class="btn btn-primary" style="align-self:flex-start;margin-top:6px" onclick="trocarSenha()">
             <i class="ti ti-lock-check"></i> Salvar nova senha
@@ -502,6 +498,10 @@
     <div class="card">
       <div class="card-header">
         <div class="card-title"><i class="ti ti-activity"></i> Registro de Auditoria</div>
+        <div class="tab-search-wrap" style="margin-bottom:0">
+          <i class="ti ti-search"></i>
+          <input type="text" id="audit-busca-nome" placeholder="Buscar por nome..." oninput="buscarAuditoriaNome(this.value)">
+        </div>
       </div>
       <div class="tab-bar" style="padding:0 20px">
         <div class="tab active" onclick="filtrarAuditoria(null, this)">Todos</div>
@@ -624,15 +624,15 @@
         <div style="padding:24px;display:flex;flex-direction:column;gap:14px">
           <div class="form-group" style="margin:0">
             <label>Nome completo</label>
-            <input type="text" id="ca-nome" placeholder="Ex: João da Silva">
+            <input type="text" id="ca-nome" placeholder="Ex: João da Silva" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;font-size:13.5px;font-family:var(--font-body);width:100%;outline:none;color:var(--text-primary)">
           </div>
           <div class="form-group" style="margin:0">
             <label>E-mail</label>
-            <input type="email" id="ca-email" placeholder="email@usga.com.br">
+            <input type="email" id="ca-email" placeholder="email@usga.com.br" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;font-size:13.5px;font-family:var(--font-body);width:100%;outline:none;color:var(--text-primary)">
           </div>
           <div class="form-group" style="margin:0">
             <label>Senha provisória</label>
-            <input type="password" id="ca-senha" placeholder="Mínimo 8 caracteres">
+            <input type="password" id="ca-senha" placeholder="Mínimo 8 caracteres" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;font-size:13.5px;font-family:var(--font-body);width:100%;outline:none;color:var(--text-primary)">
           </div>
           <div class="form-group" style="margin:0">
             <label>Cargo</label>

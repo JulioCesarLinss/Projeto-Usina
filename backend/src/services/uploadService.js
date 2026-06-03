@@ -5,12 +5,15 @@ export const processarArquivo = (file) => {
         'application/vnd.ms-excel': 'xls',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-        'image/png': 'png'
+        'image/png': 'png',
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg'
     };
     const tipo = tiposPermitidos[file.mimetype] || 'desconhecido';
+    const nomeCorreto = Buffer.from(file.originalname, 'latin1').toString('utf8');
     return {
         id: file.filename,
-        nome: file.originalname,
+        nome: nomeCorreto,
         tipo: tipo,
         tamanho: file.size,
         caminho: `/uploads/${file.filename}`,

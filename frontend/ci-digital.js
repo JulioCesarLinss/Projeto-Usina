@@ -647,13 +647,13 @@ async function abrirCIDoBackend(id, modoAdmin = false) {
         anexos.forEach(a => {
           const tamanhoKB = a.tamanho ? (parseInt(a.tamanho) / 1024).toFixed(1) + ' KB' : '';
           lista.innerHTML += `
-            <a href="http://localhost:3000${a.caminho}" target="_blank" download="${a.nome}"
-               style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--usga-xpale);border:1px solid var(--border);border-radius:var(--radius);text-decoration:none;color:var(--text-primary)">
+            <div onclick="baixarAnexo('http://localhost:3000${a.caminho}','${a.nome.replace(/'/g,"\\'")}')"
+               style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--usga-xpale);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;color:var(--text-primary)">
               <i class="ti ti-paperclip" style="color:var(--usga-mid);font-size:16px"></i>
               <span style="flex:1;font-size:13px;font-weight:500">${a.nome}</span>
               ${tamanhoKB ? `<span style="font-size:11px;color:var(--text-muted)">${tamanhoKB}</span>` : ''}
               <i class="ti ti-download" style="color:var(--usga-mid);font-size:15px"></i>
-            </a>`;
+            </div>`;
         });
       } else {
         secao.style.display = 'none';
@@ -980,7 +980,7 @@ function showPage(name) {
     if(el) el.style.display = (p === name) ? '' : 'none';
   });
   var titles = {
-    dashboard: 'Dashboard <span>/ Visão Geral</span>',
+    dashboard: 'Tela Inicial <span>/ Visão Geral</span>',
     nova: 'Nova C.I <span>/ Redigir Comunicação</span>',
     auditoria: 'Auditoria <span>/ Histórico do Sistema</span>',
     visaogeral: 'Visão Geral <span>/ Monitoramento</span>',
@@ -1006,6 +1006,23 @@ function openCI(num, subject, from, to, prio, date, body, fromName) {
   document.getElementById('modal-date').textContent = date;
   document.getElementById('modal-subject').textContent = subject;
   document.getElementById('modal-body-text').innerHTML = linkificar(body);
+}
+
+async function baixarAnexo(url, nome) {
+  try {
+    const resp = await fetch(url);
+    const blob = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = nome;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    toast('Erro ao baixar arquivo: ' + err.message, 'error');
+  }
 }
 
 function closeModal() {
@@ -1044,13 +1061,22 @@ function exportAuditCSV() {
 // ═══════════════════════════════════════════════════════
 //  AUDITORIA
 // ═══════════════════════════════════════════════════════
-const auditState = { pagina: 1, limite: 10, total: 0, acao: null };
+const auditState = { pagina: 1, limite: 10, total: 0, acao: null, nome: '' };
+let _auditNomeTimer = null;
 
 function filtrarAuditoria(acao, el) {
   auditState.acao = acao;
   document.querySelectorAll('#page-auditoria .tab-bar .tab').forEach(t => t.classList.remove('active'));
   if (el) el.classList.add('active');
   carregarAuditoria(1);
+}
+
+function buscarAuditoriaNome(termo) {
+  clearTimeout(_auditNomeTimer);
+  _auditNomeTimer = setTimeout(() => {
+    auditState.nome = termo.trim();
+    carregarAuditoria(1);
+  }, 300);
 }
 
 async function carregarAuditoria(pagina = 1) {
@@ -1061,6 +1087,7 @@ async function carregarAuditoria(pagina = 1) {
 
   let url = `/auditoria/listar?pagina=${pagina}&limite=${auditState.limite}`;
   if (auditState.acao) url += `&acao=${encodeURIComponent(auditState.acao)}`;
+  if (auditState.nome) url += `&nome=${encodeURIComponent(auditState.nome)}`;
 
   try {
     const data = await api('GET', url);
@@ -1581,8 +1608,8 @@ function renderizarGraficoPorDepto(depts) {
   criarOuAtualizarChart('chart-por-depto', 'bar', {
     labels,
     datasets: [
-      { label: 'Enviadas',  data: depts.map(d => d.enviadas),  backgroundColor: '#43931F', borderRadius: 4 },
-      { label: 'Recebidas', data: depts.map(d => d.recebidas), backgroundColor: '#7AB260', borderRadius: 4 }
+      { label: 'Enviadas',  data: depts.map(d => d.enviadas),  backgroundColor: dark ? '#43931F' : '#1B5E20', borderRadius: 4 },
+      { label: 'Recebidas', data: depts.map(d => d.recebidas), backgroundColor: dark ? '#7AB260' : '#1976D2', borderRadius: 4 }
     ]
   }, {
     responsive: false,
@@ -1600,8 +1627,8 @@ function renderizarGraficoTaxaLeitura(depts) {
   criarOuAtualizarChart('chart-taxa-leitura', 'bar', {
     labels,
     datasets: [
-      { label: 'Lidas',     data: depts.map(d => d.lidas),    backgroundColor: '#43931F', borderRadius: 4 },
-      { label: 'Pendentes', data: depts.map(d => d.pendentes), backgroundColor: '#F0C050', borderRadius: 4 }
+      { label: 'Lidas',     data: depts.map(d => d.lidas),    backgroundColor: dark ? '#43931F' : '#388E3C', borderRadius: 4 },
+      { label: 'Pendentes', data: depts.map(d => d.pendentes), backgroundColor: dark ? '#F0C050' : '#F9A825', borderRadius: 4 }
     ]
   }, {
     responsive: false,
