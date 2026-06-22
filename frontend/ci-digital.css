@@ -314,6 +314,8 @@ body {
 
 .btn-primary:hover { background: var(--usga-dark); border-color: var(--usga-dark); }
 .btn i { font-size: 16px; }
+.btn-sm { padding: 4px 10px; font-size: 12px; gap: 4px; }
+.btn-sm i { font-size: 14px; }
 
 /* ── PAGE CONTENT ── */
 .page { padding: 28px; flex: 1; }
@@ -1138,12 +1140,28 @@ body.dark .tab-search-wrap:focus-within { background: #1E321E; }
 
 .vg-dept-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
+.vg-dept-del {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.vg-dept-del:hover { color: var(--danger); background: rgba(239,68,68,.08); }
+.vg-dept-item:hover .vg-dept-del { display: inline-flex; align-items: center; }
+body.dark .vg-dept-del:hover { background: rgba(239,68,68,.15); }
+
 .vg-dept-stats {
-  margin-left: auto;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 1px;
+  margin-left: auto;
+  margin-right: 4px;
 }
 
 .vg-dept-total { font-size: 12px; font-weight: 600; color: var(--usga-mid); }

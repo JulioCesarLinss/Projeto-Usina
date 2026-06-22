@@ -65,6 +65,11 @@ export const listarCIsPorDepartamento = async (departamento_id, pagina = 1, limi
   return results;
 };
 
+export const deletarDepartamento = async (id) => {
+  const [result] = await pool.query('DELETE FROM departamento WHERE id = ?', [id]);
+  return result;
+};
+
 export const contarCIsPorDepartamento = async (departamento_id, busca = '') => {
   const buscaLike = `%${busca}%`;
   const buscaClause = busca

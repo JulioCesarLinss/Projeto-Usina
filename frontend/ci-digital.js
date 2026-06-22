@@ -818,7 +818,7 @@ async function carregarRascunhos() {
     card.style.display = '';
     lista.innerHTML = rascunhos.map(r => {
       const data = r.data_hora ? new Date(r.data_hora).toLocaleDateString('pt-BR') : '—';
-      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border)">
+      return `<div id="rascunho-row-${r.id}" style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border)">
         <i class="ti ti-file-pencil" style="color:var(--usga-mid);font-size:18px"></i>
         <div style="flex:1">
           <div style="font-weight:600;font-size:13px">${r.titulo || '(sem título)'}</div>
@@ -827,10 +827,41 @@ async function carregarRascunhos() {
         <button class="btn-ghost" style="font-size:12px" onclick="editarRascunho(${r.id}, '${encodeURIComponent(r.titulo || '')}', '${encodeURIComponent(r.descricao || '')}', ${r.departamento_id})">
           <i class="ti ti-edit"></i> Continuar
         </button>
+        <button id="rasc-del-btn-${r.id}" class="btn-ghost" style="font-size:12px;color:var(--danger)" onclick="confirmarDelRascunho(${r.id})" title="Excluir rascunho">
+          <i class="ti ti-trash"></i>
+        </button>
       </div>`;
     }).join('');
   } catch (e) {
     card.style.display = 'none';
+  }
+}
+
+function confirmarDelRascunho(id) {
+  const btn = document.getElementById(`rasc-del-btn-${id}`);
+  if (!btn) return;
+  btn.outerHTML = `
+    <div style="display:flex;align-items:center;gap:5px">
+      <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">Excluir?</span>
+      <button onclick="deletarRascunho(${id})"
+        style="background:var(--danger);color:white;border:none;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;font-family:var(--font-body);font-weight:500">
+        Sim
+      </button>
+      <button onclick="carregarRascunhos()"
+        style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;font-family:var(--font-body);color:var(--text-mid)">
+        Não
+      </button>
+    </div>`;
+}
+
+async function deletarRascunho(id) {
+  try {
+    await api('DELETE', `/comunicacoes/${id}/rascunho`);
+    if (state.rascunhoAtual === id) cancelarEdicaoRascunho();
+    await carregarRascunhos();
+    toast('Rascunho excluído.', 'success');
+  } catch (e) {
+    toast(e.message || 'Erro ao excluir rascunho.', 'error');
   }
 }
 
@@ -1272,6 +1303,7 @@ async function carregarVisaoGeral() {
       lista.innerHTML = '<div class="empty-state"><p>Nenhum departamento.</p></div>';
       return;
     }
+    const podeGerenciar = state.usuario?.cargo_id <= 2;
     lista.innerHTML = depts.map((d, i) => `
       <div class="vg-dept-item" data-id="${d.id}" onclick="selecionarDeptVG(${d.id}, '${d.nome}')">
         <span class="vg-dept-dot" style="background:${VG_CORES[i % VG_CORES.length]}"></span>
@@ -1280,9 +1312,77 @@ async function carregarVisaoGeral() {
           <span class="vg-dept-total">${d.total_cis}</span>
           <span class="vg-dept-hoje">${d.cis_hoje} hoje</span>
         </div>
+        ${podeGerenciar ? `<button class="vg-dept-del" id="vg-del-btn-${d.id}" title="Excluir departamento" onclick="event.stopPropagation();confirmarDelDept(${d.id},'${d.nome.replace(/'/g, "\\'")}')"><i class="ti ti-trash"></i></button>` : ''}
       </div>`).join('');
   } catch (e) {
     lista.innerHTML = '<div class="empty-state"><p>Erro ao carregar.</p></div>';
+  }
+}
+
+function abrirModalNovoDept() {
+  document.getElementById('novo-dept-nome').value = '';
+  document.getElementById('novo-dept-desc').value = '';
+  document.getElementById('modal-novo-dept').style.display = 'flex';
+  setTimeout(() => document.getElementById('novo-dept-nome').focus(), 80);
+}
+
+function fecharModalNovoDept() {
+  document.getElementById('modal-novo-dept').style.display = 'none';
+}
+
+async function confirmarNovoDept() {
+  const nome = document.getElementById('novo-dept-nome').value.trim();
+  const descricao = document.getElementById('novo-dept-desc').value.trim();
+  if (!nome || nome.length < 2) { toast('Informe o nome do departamento.', 'error'); return; }
+  try {
+    await api('POST', '/departamentos', { nome, descricao });
+    fecharModalNovoDept();
+    toast('Departamento criado com sucesso!', 'success');
+    await carregarDepartamentos();
+    await carregarVisaoGeral();
+  } catch (e) {
+    toast(e.message || 'Erro ao criar departamento.', 'error');
+  }
+}
+
+function confirmarDelDept(id, nome) {
+  const btn = document.getElementById(`vg-del-btn-${id}`);
+  if (!btn) return;
+  const item = btn.closest('.vg-dept-item');
+  if (!item) return;
+  // Desabilita o click de seleção do item enquanto confirma
+  item.onclick = null;
+  btn.outerHTML = `
+    <div id="vg-del-confirm-${id}" style="display:flex;align-items:center;gap:5px">
+      <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">Excluir?</span>
+      <button onclick="event.stopPropagation();deletarDepartamentoVG(${id},'${nome.replace(/'/g, "\\'")}')"
+        style="background:var(--danger);color:white;border:none;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;font-family:var(--font-body);font-weight:500">
+        Sim
+      </button>
+      <button onclick="event.stopPropagation();carregarVisaoGeral()"
+        style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;font-family:var(--font-body);color:var(--text-mid)">
+        Não
+      </button>
+    </div>`;
+}
+
+async function deletarDepartamentoVG(id, nome) {
+  try {
+    await api('DELETE', `/departamentos/${id}`);
+    toast('Departamento excluído.', 'success');
+    const foiAtual = vgState.deptAtual === id;
+    await carregarDepartamentos();
+    await carregarVisaoGeral();
+    if (foiAtual) {
+      vgState.deptAtual = null;
+      document.getElementById('vg-ci-placeholder').style.display = '';
+      document.getElementById('vg-ci-table').style.display = 'none';
+      document.getElementById('vg-ci-footer').style.display = 'none';
+      document.getElementById('vg-busca-wrap').style.display = 'none';
+      document.getElementById('vg-ci-titulo').innerHTML = '<i class="ti ti-inbox"></i> Selecione um departamento';
+    }
+  } catch (e) {
+    toast(e.message || 'Erro ao excluir departamento.', 'error');
   }
 }
 

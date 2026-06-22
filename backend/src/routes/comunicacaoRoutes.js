@@ -12,6 +12,7 @@ router.get('/buscar', verificarToken, comunicacaoController.buscarCIsComFiltros)
 router.get('/minhas', verificarToken, comunicacaoController.listarMinhasCIs);
 router.get('/rascunhos', verificarToken, comunicacaoController.listarRascunhos);
 router.put('/:id', verificarToken, comunicacaoController.atualizarCI);
+router.delete('/:id/rascunho', verificarToken, comunicacaoController.deletarRascunho);
 router.get('/arquivadas', verificarToken, comunicacaoController.listarCIsArquivadas);
 router.post('/:id/arquivar', verificarToken, verificarGerente, comunicacaoController.arquivarComunicacao);
 router.get('/:id/anexos', verificarToken, comunicacaoController.listarAnexosCI);

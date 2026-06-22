@@ -24,6 +24,31 @@ export const listarDepartamentosComStats = async (req, res, next) => {
   }
 };
 
+export const criarDepartamento = async (req, res, next) => {
+  try {
+    const { nome, descricao } = req.body;
+    if (!nome || nome.trim().length < 2)
+      throw new ValidationError('Nome do departamento obrigatório (mínimo 2 caracteres)', 'NOME_INVALIDO', []);
+    await departamentoModel.criarDepartamento(nome.trim(), (descricao || '').trim());
+    res.status(201).json({ sucesso: true, mensagem: 'Departamento criado com sucesso' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deletarDepartamento = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!id || isNaN(id)) throw new ValidationError('ID inválido', 'ID_INVALIDO', []);
+    const dept = await departamentoModel.buscarDepartamentoporID(id);
+    if (!dept) throw new ValidationError('Departamento não encontrado', 'NAO_ENCONTRADO', []);
+    await departamentoModel.deletarDepartamento(id);
+    res.status(200).json({ sucesso: true, mensagem: 'Departamento excluído com sucesso' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const listarCIsPorDepartamento = async (req, res, next) => {
   try {
     const { id } = req.params;

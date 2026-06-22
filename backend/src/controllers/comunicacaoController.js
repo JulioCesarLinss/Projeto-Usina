@@ -279,6 +279,19 @@ export const listarRascunhos = async (req, res, next) => {
   }
 };
 
+export const deletarRascunho = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!id || isNaN(id)) throw new ValidationError('ID inválido', 'ID_INVALIDO', []);
+    const result = await comunicacaoModel.deletarRascunho(id, req.usuario.id);
+    if (result.affectedRows === 0)
+      throw new ValidationError('Rascunho não encontrado ou sem permissão', 'NAO_ENCONTRADO', []);
+    res.status(200).json({ sucesso: true, mensagem: 'Rascunho excluído' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // atualizarCI — atualiza um rascunho existente (pode enviar ou manter como rascunho)
 export const atualizarCI = async (req, res, next) => {
   try {

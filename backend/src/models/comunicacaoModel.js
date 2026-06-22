@@ -82,6 +82,29 @@ export const listarRascunhos = async (usuario_id) => {
   return results;
 };
 
+export const deletarRascunho = async (id, usuario_id) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query('DELETE FROM confirmacao_leitura WHERE comunicacao_id = ?', [id]);
+    await conn.query('DELETE FROM destinatario WHERE comunicacao_id = ?', [id]);
+    await conn.query('DELETE FROM anexo WHERE comunicacao_id = ?', [id]);
+    await conn.query('DELETE FROM notificacoes WHERE comunicacao_id = ?', [id]);
+    await conn.query('UPDATE logs_sistema SET comunicacao_id = NULL WHERE comunicacao_id = ?', [id]);
+    const [result] = await conn.query(
+      "DELETE FROM comunicacao WHERE id = ? AND usuario_id = ? AND estado = 'rascunho'",
+      [id, usuario_id]
+    );
+    await conn.commit();
+    return result;
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+};
+
 export const atualizarCI = async (id, titulo, descricao, departamento_id, estado) => {
   const sql = 'UPDATE comunicacao SET titulo = ?, descricao = ?, departamento_id = ?, estado = ?, data_hora = NOW() WHERE id = ?';
   const [result] = await pool.query(sql, [titulo, descricao, departamento_id, estado, id]);
