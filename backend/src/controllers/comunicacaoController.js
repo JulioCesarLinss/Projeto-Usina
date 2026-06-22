@@ -117,12 +117,13 @@ export const listarComunicacaoRecebidas = async (req,res,next) =>{
         // gerente (2) e master (1) veem CIs de todos os departamentos
         const verTodos = req.usuario.cargo_id <= 2;
         const filtro_departamento_id = req.query.departamento_filtro ? parseInt(req.query.departamento_filtro) : null;
+        const apenasNaoLidas = req.query.nao_lida === '1';
 
         let comunicacao, total;
         try{
             [comunicacao, total] = await Promise.all([
-                comunicacaoModel.listarCIRecebidas(departamento_id, req.usuario.id, pagina, limite, verTodos, filtro_departamento_id),
-                comunicacaoModel.contarCIRecebidas(departamento_id, req.usuario.id, verTodos, filtro_departamento_id)
+                comunicacaoModel.listarCIRecebidas(departamento_id, req.usuario.id, pagina, limite, verTodos, filtro_departamento_id, apenasNaoLidas),
+                comunicacaoModel.contarCIRecebidas(departamento_id, req.usuario.id, verTodos, filtro_departamento_id, apenasNaoLidas)
             ]);
         }catch(err){
             throw new DatabaseError(

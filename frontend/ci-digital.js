@@ -17,6 +17,7 @@ const state = {
   paginaAtual: 1,
   limiteCI: 5,
   totalCI: 0,
+  filtroNaoLida: false,
 };
 
 // ═══════════════════════════════════════════════════════
@@ -372,6 +373,8 @@ async function iniciarApp() {
   document.getElementById('ci-data').value = new Date().toISOString().split('T')[0];
   await Promise.all([carregarCIs(), carregarNotificacoes()]);
   atualizarStats();
+  const filtrosRow = document.getElementById('ci-filtros-row');
+  if (filtrosRow) filtrosRow.style.display = 'flex';
   carregarDeptDashboard();
   if (state.usuario.cargo_id <= 2) carregarAuditDashboard();
   aplicarPermissoesFrontend(state.usuario);
@@ -426,8 +429,9 @@ async function carregarCIs() {
   tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)"><i class="ti ti-loader" style="animation:spin .6s linear infinite;display:inline-block;margin-right:6px"></i> Carregando...</td></tr>';
   try {
     const dept = state.filtroDepartamento ? `&departamento_filtro=${state.filtroDepartamento}` : '';
+    const naoLida = state.filtroNaoLida && state.abaAtiva === 'recebidas' ? '&nao_lida=1' : '';
     const epMap = {
-      recebidas:  `/comunicacoes/recebidas?pagina=${state.paginaAtual}&limite=${state.limiteCI}${dept}`,
+      recebidas:  `/comunicacoes/recebidas?pagina=${state.paginaAtual}&limite=${state.limiteCI}${dept}${naoLida}`,
       enviadas:   `/comunicacoes/enviadas?pagina=${state.paginaAtual}&limite=${state.limiteCI}${dept}`,
       minhas:     `/comunicacoes/minhas?pagina=${state.paginaAtual}&limite=${state.limiteCI}${dept}`,
       arquivadas: `/comunicacoes/arquivadas?pagina=${state.paginaAtual}&limite=${state.limiteCI}`
@@ -569,10 +573,23 @@ async function _executarBusca(q) {
 
 function mudarAbaCI(aba, el) {
   state.abaAtiva = aba; state.paginaAtual = 1;
+  state.filtroNaoLida = false;
   document.querySelectorAll('.tab-bar .tab').forEach(t => t.classList.remove('active'));
   if (el) el.classList.add('active');
   const busca = document.getElementById('ci-busca');
   if (busca) busca.value = '';
+  const filtrosRow = document.getElementById('ci-filtros-row');
+  const btnFiltro = document.getElementById('btn-filtro-nao-lida');
+  if (filtrosRow) filtrosRow.style.display = aba === 'recebidas' ? 'flex' : 'none';
+  if (btnFiltro) btnFiltro.classList.remove('ativo');
+  carregarCIs();
+}
+
+function toggleFiltroNaoLida() {
+  state.filtroNaoLida = !state.filtroNaoLida;
+  state.paginaAtual = 1;
+  const btn = document.getElementById('btn-filtro-nao-lida');
+  if (btn) btn.classList.toggle('ativo', state.filtroNaoLida);
   carregarCIs();
 }
 
@@ -704,7 +721,7 @@ async function confirmarLeituraAtual() {
     await api('PATCH', '/notificacoes/ci/' + state.ciAtual.id + '/lida');
     toast('Leitura confirmada!');
     btn.innerHTML = '<i class="ti ti-circle-check"></i> Leitura Confirmada';
-    await carregarNotificacoes();
+    await Promise.all([carregarCIs(), carregarNotificacoes()]);
     atualizarStats();
   } catch (err) {
     toast('Erro ao confirmar leitura: ' + err.message, 'error');
@@ -1063,6 +1080,7 @@ function closeModal() {
   if (btn) { btn.disabled = false; btn.style.display = ''; btn.innerHTML = '<i class="ti ti-check"></i> Confirmar Leitura'; }
   const indicador = document.getElementById('modal-read-indicator');
   if (indicador) indicador.style.display = '';
+  carregarCIs();
 }
 
 document.getElementById('modal-ci').addEventListener('click', function(e) {

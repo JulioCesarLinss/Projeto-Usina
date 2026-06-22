@@ -17,34 +17,33 @@ export const buscarCIporID = async (id) => {
   return results[0];
 };
 
-export const contarCIRecebidas = async (departamento_id, usuario_id, verTodos = false, filtro_departamento_id = null) => {
-  const deptCond = filtro_departamento_id
-    ? 'AND c.departamento_id = ?'
-    : '';
+export const contarCIRecebidas = async (departamento_id, usuario_id, verTodos = false, filtro_departamento_id = null, apenasNaoLidas = false) => {
+  const deptCond = filtro_departamento_id ? 'AND c.departamento_id = ?' : '';
   const deptParams = filtro_departamento_id ? [filtro_departamento_id] : [];
-  // todos os cargos: só aparecem CIs onde o usuário é destinatário explícito
+  const dateCond = apenasNaoLidas ? '' : 'AND DATE(c.data_hora) = CURDATE()';
+  const naoLidaCond = apenasNaoLidas ? 'AND cl.id IS NULL' : '';
   const sql = `SELECT COUNT(*) AS total FROM comunicacao c
     INNER JOIN destinatario dest ON dest.comunicacao_id = c.id AND dest.usuario_id = ?
-    WHERE c.usuario_id != ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE()
-    ${deptCond}`;
-  const [results] = await pool.query(sql, [usuario_id, usuario_id, ...deptParams]);
+    LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
+    WHERE c.usuario_id != ? AND c.estado = 'enviada'
+    ${dateCond} ${deptCond} ${naoLidaCond}`;
+  const [results] = await pool.query(sql, [usuario_id, usuario_id, usuario_id, ...deptParams]);
   return results[0].total;
 };
 
-export const listarCIRecebidas = async (departamento_id, usuario_id, pagina = 1, limite = 20, verTodos = false, filtro_departamento_id = null) => {
+export const listarCIRecebidas = async (departamento_id, usuario_id, pagina = 1, limite = 20, verTodos = false, filtro_departamento_id = null, apenasNaoLidas = false) => {
   const offset = (pagina - 1) * limite;
-  const deptCond = filtro_departamento_id
-    ? 'AND c.departamento_id = ?'
-    : '';
+  const deptCond = filtro_departamento_id ? 'AND c.departamento_id = ?' : '';
   const deptParams = filtro_departamento_id ? [filtro_departamento_id] : [];
-  // todos os cargos: só mostra CIs onde o usuário é destinatário explícito
+  const dateCond = apenasNaoLidas ? '' : 'AND DATE(c.data_hora) = CURDATE()';
+  const naoLidaCond = apenasNaoLidas ? 'AND cl.id IS NULL' : '';
   const sql = `SELECT c.*, CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS lida
     FROM comunicacao c
     INNER JOIN destinatario dest ON dest.comunicacao_id = c.id AND dest.usuario_id = ?
     LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
-    WHERE c.usuario_id != ? AND c.estado = 'enviada' AND DATE(c.data_hora) = CURDATE()
-    ${deptCond}
-    ORDER BY cl.id IS NOT NULL, c.data_hora DESC LIMIT ? OFFSET ?`;
+    WHERE c.usuario_id != ? AND c.estado = 'enviada'
+    ${dateCond} ${deptCond} ${naoLidaCond}
+    ORDER BY c.data_hora DESC LIMIT ? OFFSET ?`;
   const [results] = await pool.query(sql, [usuario_id, usuario_id, usuario_id, ...deptParams, limite, offset]);
   return results;
 };

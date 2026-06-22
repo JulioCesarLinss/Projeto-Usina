@@ -895,6 +895,28 @@ body.dark .ci-link:hover { text-decoration-color: #5EB3E0; }
 ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--usga-light); }
 
+/* ── FILTROS ROW ── */
+.ci-filtro-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: none;
+  color: var(--text-mid);
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: all 0.12s;
+}
+.ci-filtro-chip:hover { background: var(--surface); border-color: var(--border-mid); }
+.ci-filtro-chip.ativo { background: var(--usga-mid); border-color: var(--usga-mid); color: white; }
+body.dark .ci-filtro-chip { border-color: var(--border); color: var(--text-mid); }
+body.dark .ci-filtro-chip:hover { background: #1E321E; }
+body.dark .ci-filtro-chip.ativo { background: var(--usga-mid); border-color: var(--usga-mid); color: white; }
+
 /* ── TABS ── */
 .tab-bar {
   display: flex;
