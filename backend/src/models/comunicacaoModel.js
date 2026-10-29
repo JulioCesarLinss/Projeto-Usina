@@ -1,17 +1,20 @@
 import pool from '../config/db.js';
 
-export const criarComunicacao = async (titulo, data_hora, estado, descricao, usuario_id, departamento_id) => {
-  const sql = 'INSERT INTO comunicacao (titulo, data_hora, estado, descricao, usuario_id, departamento_id) VALUES (?, ?, ?, ?, ?, ?)';
-  const [result] = await pool.query(sql, [titulo, data_hora, estado, descricao, usuario_id, departamento_id]);
+export const criarComunicacao = async (titulo, data_hora, estado, descricao, usuario_id, departamento_id, em_nome_de_id = null) => {
+  const sql = 'INSERT INTO comunicacao (titulo, data_hora, estado, descricao, usuario_id, departamento_id, em_nome_de_id) VALUES (?, ?, ?, ?, ?, ?, ?)';
+  const [result] = await pool.query(sql, [titulo, data_hora, estado, descricao, usuario_id, departamento_id, em_nome_de_id]);
   return result;
 };
 
 export const buscarCIporID = async (id) => {
   const sql = `
     SELECT c.id, c.titulo, c.data_hora, c.estado, c.descricao, c.usuario_id, c.departamento_id,
-           u.nome AS usuario_nome, u.foto_url AS usuario_foto
+           c.em_nome_de_id, c.aprovado_por, c.aprovado_em,
+           u.nome AS usuario_nome, u.foto_url AS usuario_foto,
+           g.nome AS em_nome_de_nome
     FROM comunicacao c
     INNER JOIN usuario u ON c.usuario_id = u.id
+    LEFT JOIN usuario g ON g.id = c.em_nome_de_id
     WHERE c.id = ?`;
   const [results] = await pool.query(sql, [id]);
   return results[0];
@@ -104,9 +107,9 @@ export const deletarRascunho = async (id, usuario_id) => {
   }
 };
 
-export const atualizarCI = async (id, titulo, descricao, departamento_id, estado) => {
-  const sql = 'UPDATE comunicacao SET titulo = ?, descricao = ?, departamento_id = ?, estado = ?, data_hora = NOW() WHERE id = ?';
-  const [result] = await pool.query(sql, [titulo, descricao, departamento_id, estado, id]);
+export const atualizarCI = async (id, titulo, descricao, departamento_id, estado, em_nome_de_id = null) => {
+  const sql = 'UPDATE comunicacao SET titulo = ?, descricao = ?, departamento_id = ?, estado = ?, em_nome_de_id = ?, data_hora = NOW() WHERE id = ?';
+  const [result] = await pool.query(sql, [titulo, descricao, departamento_id, estado, em_nome_de_id, id]);
   return result;
 };
 
@@ -203,16 +206,25 @@ export const buscarCIs = async ({
   data_inicio,
   data_fim,
   pagina = 1,
-  limite = 20
+  limite = 20,
+  usina_id = null
 }) => {
   const offset = (pagina - 1) * limite;
   const conditions = [];
   const params = [];
 
+  // rascunho é privado do autor; gerentes (verTodos) só veem C.I.s da própria usina
+  conditions.push("(estado <> 'rascunho' OR usuario_id = ?)");
+  params.push(usuario_id);
+  if (verTodos && usina_id) {
+    conditions.push('usuario_id IN (SELECT id FROM usuario WHERE usina_id = ?)');
+    params.push(usina_id);
+  }
+
   if (tipo === 'enviadas') {
     conditions.push('usuario_id = ?');
     params.push(usuario_id);
-  } else if (tipo === 'recebidas' && !verTodos) {
+  } else if (!verTodos) {
     conditions.push('departamento_id = ?');
     params.push(departamento_id);
   }
@@ -242,4 +254,54 @@ export const buscarCIs = async ({
 
   const [results] = await pool.query(sql, params);
   return results;
+};
+
+
+// ---------- fluxo de aprovação ----------
+export const definirEstado = async (id, estado) => {
+  const [result] = await pool.query('UPDATE comunicacao SET estado = ? WHERE id = ?', [estado, id]);
+  return result;
+};
+
+// só aprova se ainda estiver aguardando (evita aprovação dupla)
+export const aprovarCI = async (id, gerente_id, assinatura) => {
+  const [result] = await pool.query(
+    `UPDATE comunicacao SET estado = 'enviada', aprovado_por = ?, aprovado_em = NOW(),
+       assinatura_aprovacao = ?, data_hora = NOW()
+     WHERE id = ? AND estado = 'aguardando_aprovacao'`,
+    [gerente_id, assinatura, id]
+  );
+  return result;
+};
+
+export const listarParaAprovar = async (gerente_id) => {
+  const [rows] = await pool.query(
+    `SELECT c.id, c.titulo, c.data_hora, c.estado, c.departamento_id, u.nome AS usuario_nome
+     FROM comunicacao c INNER JOIN usuario u ON u.id = c.usuario_id
+     WHERE c.em_nome_de_id = ? AND c.estado = 'aguardando_aprovacao'
+     ORDER BY c.data_hora DESC LIMIT 100`, [gerente_id]);
+  return rows;
+};
+
+export const listarMinhasEmAprovacao = async (usuario_id) => {
+  const [rows] = await pool.query(
+    `SELECT c.id, c.titulo, c.data_hora, c.estado, c.departamento_id, g.nome AS gerente_nome
+     FROM comunicacao c LEFT JOIN usuario g ON g.id = c.em_nome_de_id
+     WHERE c.usuario_id = ? AND c.estado IN ('aguardando_aprovacao','ajustes_solicitados')
+     ORDER BY c.data_hora DESC LIMIT 100`, [usuario_id]);
+  return rows;
+};
+
+export const salvarVersaoAtual = async (id, usuario_id) => {
+  await pool.query(
+    `INSERT INTO comunicacao_versao (comunicacao_id, titulo, descricao, usuario_id, data_hora)
+     SELECT id, titulo, descricao, ?, NOW() FROM comunicacao WHERE id = ?`, [usuario_id, id]);
+};
+
+export const listarVersoes = async (id) => {
+  const [rows] = await pool.query(
+    `SELECT v.id, v.titulo, v.descricao, v.data_hora, u.nome AS usuario_nome
+     FROM comunicacao_versao v INNER JOIN usuario u ON u.id = v.usuario_id
+     WHERE v.comunicacao_id = ? ORDER BY v.data_hora DESC`, [id]);
+  return rows;
 };

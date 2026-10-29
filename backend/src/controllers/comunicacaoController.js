@@ -3,12 +3,14 @@ import * as notificacaoModel from '../models/notificacaoModel.js';
 import * as destinatarioModel from '../models/destinatarioModel.js';
 import * as anexoModel from '../models/anexoModel.js';
 import * as usuarioModel from '../models/usuarioModel.js';
-import { ValidationError, NotFoundError, DatabaseError } from '../utils/appError.js';
+import * as comentarioModel from '../models/comentarioModel.js';
+import * as aprovacaoService from '../services/aprovacaoService.js';
+import { ValidationError, NotFoundError, DatabaseError, AuthorizationError } from '../utils/appError.js';
 import { registrarLog, getClientIP } from '../middlewares/auditMiddleware.js';
 
 export const criarCI = async (req, res, next) => {
   try {
-    const { titulo, estado, descricao, departamento_id, destinatarios } = req.body;
+    const { titulo, estado, descricao, departamento_id, destinatarios, em_nome_de_id } = req.body;
     const usuario_id = req.usuario.id;
     const data_hora = new Date();
 
@@ -16,48 +18,37 @@ export const criarCI = async (req, res, next) => {
       throw new ValidationError('Campos obrigatórios', 'CAMPOS_OBRIGATORIOS', []);
     }
 
-    const estadoFinal = estado || 'rascunho';
-
-    if (!['rascunho', 'enviada'].includes(estadoFinal)) {
+    const estadoPedido = estado || 'rascunho';
+    if (!['rascunho', 'enviada'].includes(estadoPedido)) {
       throw new ValidationError('Estado inválido', 'ESTADO_INVALIDO', []);
     }
 
+    // enviar "em nome de" um gerente exige a aprovação dele antes de qualquer envio
+    const gerente = em_nome_de_id ? await aprovacaoService.validarGerente(em_nome_de_id, req.usuario) : null;
+    const estadoFinal = (estadoPedido === 'enviada' && gerente) ? 'aguardando_aprovacao' : estadoPedido;
+
     let resultado;
     try {
-      resultado = await comunicacaoModel.criarComunicacao(titulo, data_hora, estadoFinal, descricao, usuario_id, departamento_id);
+      resultado = await comunicacaoModel.criarComunicacao(titulo, data_hora, estadoFinal, descricao, usuario_id, departamento_id, gerente ? gerente.id : null);
     } catch (err) {
       throw new DatabaseError('Erro ao criar comunicação', 'ERRO_CRIAR_COMUNICACAO');
     }
 
-    // notificações só são criadas quando a CI é enviada, nunca para rascunhos
     if (estadoFinal === 'enviada') {
-      let listaDestinatarios = destinatarios || [];
-
-      // se nenhum destinatário específico foi escolhido, notifica todos do departamento
-      if (listaDestinatarios.length === 0) {
-        const usuariosDept = await usuarioModel.listarPorDepartamento(departamento_id);
-        listaDestinatarios = usuariosDept.map(u => ({ usuario_id: u.id, departamento_id }));
-      }
-
-      for (const dest of listaDestinatarios) {
-        // não notifica o próprio remetente
-        if (dest.usuario_id === usuario_id) continue;
-        await destinatarioModel.adicionarDestinatario(resultado.insertId, dest.usuario_id, dest.departamento_id);
-        await notificacaoModel.criarNotificacao(
-          `Nova C.I recebida: ${titulo}`,
-          dest.usuario_id,
-          resultado.insertId
-        );
-      }
-    }
-
-    if (estadoFinal === 'enviada') {
+      await aprovacaoService.salvarDestinatarios(resultado.insertId, destinatarios, departamento_id, usuario_id);
+      await aprovacaoService.notificarDestinatarios(resultado.insertId, titulo);
       await registrarLog(usuario_id, 'Envio de C.I', getClientIP(req), resultado.insertId);
+    } else if (estadoFinal === 'aguardando_aprovacao') {
+      await aprovacaoService.salvarDestinatarios(resultado.insertId, destinatarios, departamento_id, usuario_id);
+      await notificacaoModel.criarNotificacao(`Aprovação pendente: ${titulo}`, gerente.id, resultado.insertId);
+      await registrarLog(usuario_id, 'Envio para aprovação do gerente', getClientIP(req), resultado.insertId);
     }
 
     res.status(201).json({
       sucesso: true,
-      mensagem: 'Comunicação criada com sucesso',
+      mensagem: estadoFinal === 'aguardando_aprovacao'
+        ? 'Comunicação enviada para aprovação do gerente'
+        : 'Comunicação criada com sucesso',
       dados: { id: resultado.insertId, titulo, estado: estadoFinal }
     });
 
@@ -252,6 +243,7 @@ export const buscarCIsComFiltros = async (req, res, next) => {
             departamento_id: req.usuario.departamento_id,
             usuario_id: req.usuario.id,
             verTodos,
+            usina_id: req.usuario.usina_id,
             busca,
             estado,
             data_inicio,
@@ -293,31 +285,51 @@ export const deletarRascunho = async (req, res, next) => {
   }
 };
 
-// atualizarCI — atualiza um rascunho existente (pode enviar ou manter como rascunho)
+// atualizarCI — o AUTOR edita um rascunho ou uma C.I. com ajustes solicitados
+// (pode manter, enviar ou reenviar para aprovação)
 export const atualizarCI = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { titulo, descricao, departamento_id, estado, destinatarios } = req.body;
+    const { titulo, descricao, departamento_id, estado, destinatarios, em_nome_de_id } = req.body;
 
     if (!id || isNaN(id)) throw new ValidationError('ID inválido', 'ID_INVALIDO', []);
     if (!titulo || !descricao || !departamento_id) throw new ValidationError('Campos obrigatórios', 'CAMPOS_OBRIGATORIOS', []);
 
-    const estadoFinal = estado || 'rascunho';
-    await comunicacaoModel.atualizarCI(id, titulo, descricao, departamento_id, estadoFinal);
+    const ci = await comunicacaoModel.buscarCIporID(id);
+    if (!ci) throw new NotFoundError('Comunicação não encontrada', 'COMUNICACAO_NAO_ENCONTRADA');
+    if (ci.usuario_id !== req.usuario.id)
+      throw new AuthorizationError('Somente o autor pode editar a C.I.', 'ACESSO_NEGADO');
+    if (!['rascunho', 'ajustes_solicitados'].includes(ci.estado))
+      throw new ValidationError('Esta C.I. não pode mais ser editada', 'CI_NAO_EDITAVEL', []);
 
-    // se estiver enviando, cria notificações para os destinatários
+    const estadoPedido = estado || 'rascunho';
+    if (!['rascunho', 'enviada'].includes(estadoPedido))
+      throw new ValidationError('Estado inválido', 'ESTADO_INVALIDO', []);
+
+    const idGerente = em_nome_de_id !== undefined ? em_nome_de_id : ci.em_nome_de_id;
+    const gerente = idGerente ? await aprovacaoService.validarGerente(idGerente, req.usuario) : null;
+    const veioDeAjuste = ci.estado === 'ajustes_solicitados';
+
+    // salvar sem enviar não faz uma C.I. em ajuste voltar a ser rascunho
+    let estadoFinal = estadoPedido;
+    if (estadoPedido === 'enviada') estadoFinal = gerente ? 'aguardando_aprovacao' : 'enviada';
+    else if (veioDeAjuste) estadoFinal = 'ajustes_solicitados';
+
+    // guarda o texto anterior para o gerente ver o que mudou
+    if (veioDeAjuste) await comunicacaoModel.salvarVersaoAtual(id, req.usuario.id);
+
+    await comunicacaoModel.atualizarCI(id, titulo, descricao, departamento_id, estadoFinal, gerente ? gerente.id : null);
+
     if (estadoFinal === 'enviada') {
-      let listaDestinatarios = destinatarios || [];
-      if (listaDestinatarios.length === 0) {
-        const usuariosDept = await usuarioModel.listarPorDepartamento(departamento_id);
-        listaDestinatarios = usuariosDept.map(u => ({ usuario_id: u.id, departamento_id }));
-      }
-      for (const dest of listaDestinatarios) {
-        if (dest.usuario_id === req.usuario.id) continue;
-        await destinatarioModel.adicionarDestinatario(parseInt(id), dest.usuario_id, dest.departamento_id);
-        await notificacaoModel.criarNotificacao(`Nova C.I recebida: ${titulo}`, dest.usuario_id, parseInt(id));
-      }
+      await aprovacaoService.salvarDestinatarios(parseInt(id), destinatarios, departamento_id, req.usuario.id);
+      await aprovacaoService.notificarDestinatarios(parseInt(id), titulo);
       await registrarLog(req.usuario.id, 'Envio de C.I', getClientIP(req), parseInt(id));
+    } else if (estadoFinal === 'aguardando_aprovacao') {
+      await aprovacaoService.salvarDestinatarios(parseInt(id), destinatarios, departamento_id, req.usuario.id);
+      if (veioDeAjuste)
+        await comentarioModel.criarComentario(parseInt(id), req.usuario.id, 'reenvio', 'C.I. ajustada e reenviada para aprovação');
+      await notificacaoModel.criarNotificacao(`Aprovação pendente: ${titulo}`, gerente.id, parseInt(id));
+      await registrarLog(req.usuario.id, 'Envio para aprovação do gerente', getClientIP(req), parseInt(id));
     }
 
     res.status(200).json({ sucesso: true, mensagem: 'CI atualizada com sucesso', dados: { id, estado: estadoFinal } });

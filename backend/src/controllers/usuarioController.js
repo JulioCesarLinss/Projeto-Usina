@@ -13,6 +13,7 @@ import {
 import { revogarToken } from '../middlewares/authMiddleware.js';
 import { registrarLog, getClientIP } from '../middlewares/auditMiddleware.js';
 import * as emailService from '../services/emailService.js';
+import * as usinaModel from '../models/usinaModel.js';
 
 export const cadastrarUsuario = async (req, res, next) => {
   try {
@@ -138,13 +139,16 @@ export const login = async (req, res, next) => {
         id: usuario.id,
         cargo_id: usuario.cargo_id,
         email: usuario.email,
-        departamento_id: usuario.departamento_id
+        departamento_id: usuario.departamento_id,
+        usina_id: usuario.usina_id
       },
       process.env.JWT_SECRET,
       {
         expiresIn: process.env.JWT_EXPIRATION || '8h'
       }
     );
+
+    const usina = await usinaModel.buscarPorId(usuario.usina_id);
 
     const ip = getClientIP(req);
 
@@ -165,6 +169,8 @@ export const login = async (req, res, next) => {
           email: usuario.email,
           cargo_id: usuario.cargo_id,
           departamento_id: usuario.departamento_id,
+          usina_id: usuario.usina_id,
+          usina: usina || null,
           foto_url: usuario.foto_url || null
         }
       }
@@ -585,6 +591,15 @@ export const listarPorDepartamento = async (req, res, next) => {
     }
     const usuarios = await usuarioModel.listarPorDepartamento(id);
     res.status(200).json({ sucesso: true, dados: usuarios });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const listarGerentes = async (req, res, next) => {
+  try {
+    const dados = await usuarioModel.listarGerentes(req.usuario.usina_id, req.usuario.id);
+    res.status(200).json({ sucesso: true, dados });
   } catch (err) {
     next(err);
   }

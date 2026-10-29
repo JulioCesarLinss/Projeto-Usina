@@ -100,8 +100,8 @@
     <div class="brand-logos">
       <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
         <div style="background:white;border-radius:4px;padding:2px 6px;display:flex;align-items:center;justify-content:center;gap:6px">
-          <img src="fotos_usinas/USGA.png" alt="USGA" style="height:14px;object-fit:contain">
-          <img src="fotos_usinas/Trapiche.png" alt="Trapiche" style="height:14px;object-fit:contain">
+          <img class="brand-logo-img" data-usina="2" src="fotos_usinas/USGA.png" alt="USGA" style="height:14px;object-fit:contain">
+          <img class="brand-logo-img" data-usina="1" src="fotos_usinas/Trapiche.png" alt="Trapiche" style="height:14px;object-fit:contain">
         </div>
         <div class="brand-logo-trap">Grupo Serra Grande</div>
       </div>
@@ -131,7 +131,11 @@
       Nova C.I
     </div>
     <div class="nav-label">Gerencial</div>
-    <div class="nav-item supervisor-acima-only" onclick="showPage('visaogeral')">
+    <div class="nav-item admin-only" onclick="showPage('historico')">
+      <i class="ti ti-history"></i>
+      Histórico de C.I
+    </div>
+    <div class="nav-item supervisor-acima-only sem-admin" onclick="showPage('visaogeral')">
       <i class="ti ti-layout-grid"></i>
       Visão Geral
     </div>
@@ -183,6 +187,13 @@
   <!-- PAGE: DASHBOARD -->
   <div class="page" id="page-dashboard">
 
+    <div class="card" id="card-aprovacoes" style="display:none;margin-bottom:16px">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-signature"></i> Aprovações pendentes</div>
+      </div>
+      <div id="lista-aprovacoes" style="display:flex;flex-direction:column;gap:8px;padding:0 20px 16px"></div>
+    </div>
+
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-header">
@@ -226,7 +237,7 @@
           <div class="tab active" onclick="mudarAbaCI('recebidas', this)">Recebidas <span class="tab-count" id="tab-count-recebidas">—</span></div>
           <div class="tab" onclick="mudarAbaCI('enviadas', this)">Enviadas <span class="tab-count" id="tab-count-enviadas">—</span></div>
           <div class="tab" onclick="mudarAbaCI('minhas', this)">Minhas C.I <span class="tab-count" id="tab-count-minhas">—</span></div>
-          <div class="tab gerente-admin-only" onclick="mudarAbaCI('arquivadas', this)">Arquivadas <span class="tab-count" id="tab-count-arquivadas">—</span></div>
+          <div class="tab gerente-admin-only sem-admin" onclick="mudarAbaCI('arquivadas', this)">Arquivadas <span class="tab-count" id="tab-count-arquivadas">—</span></div>
           <div style="flex:1"></div>
           <div class="tab-search-wrap">
             <i class="ti ti-search"></i>
@@ -327,6 +338,10 @@
               <option value="">Selecionar...</option>
             </select>
           </div>
+        </div>
+        <div class="form-group full">
+          <label>Enviar em nome de um gerente <span style="font-weight:400;color:var(--text-muted)">(opcional — exige a aprovação dele antes do envio)</span></label>
+          <select id="ci-gerente"><option value="">Enviar em meu próprio nome</option></select>
         </div>
         <div id="ci-destinatarios-wrap" style="display:none" class="form-group full">
           <label>Destinatários</label>
@@ -500,6 +515,39 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- PAGE: HISTÓRICO (administrador: somente metadados, sem conteúdo) -->
+  <div class="page" id="page-historico" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-history"></i> Histórico de C.I</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:0 20px 12px">
+        <select id="hist-dept" onchange="carregarHistorico(true)"><option value="">Todos os setores</option></select>
+        <select id="hist-estado" onchange="carregarHistorico(true)">
+          <option value="">Enviadas e arquivadas</option>
+          <option value="enviada">Enviadas</option>
+          <option value="arquivada">Arquivadas</option>
+        </select>
+        <label style="font-size:12px;color:var(--text-muted)">Desde
+          <input type="date" id="hist-inicio" onchange="carregarHistorico(true)">
+        </label>
+        <span id="hist-aviso" style="font-size:12px;color:var(--text-muted)"></span>
+      </div>
+      <table class="ci-table">
+        <thead>
+          <tr><th>C.I</th><th>Data / Hora</th><th>Remetente</th><th>Setor</th><th>Estado</th><th>Leituras</th></tr>
+        </thead>
+        <tbody id="hist-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">Carregando...</td></tr>
+        </tbody>
+      </table>
+      <div class="table-footer">
+        <div class="table-info">O conteúdo das comunicações não é exibido para administradores.</div>
+        <button class="btn-ghost" id="hist-mais" onclick="carregarHistorico(false)" style="display:none">Carregar mais</button>
+      </div>
     </div>
   </div>
 
@@ -739,6 +787,19 @@
       <div id="modal-anexos" style="display:none;margin-top:16px">
         <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted)">Anexos</label>
         <div id="modal-anexos-lista" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
+      </div>
+      <div id="modal-aprovacao" style="display:none;margin-top:16px;padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--usga-xpale)">
+        <div id="modal-aprovacao-status" style="font-size:13px;font-weight:600;margin-bottom:10px"></div>
+        <div id="modal-comentarios" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+        <div id="modal-aprovacao-form" style="display:none">
+          <textarea id="modal-aprovacao-texto" placeholder="Comentário ou o que deseja que seja modificado..." style="min-height:70px;width:100%"></textarea>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;justify-content:flex-end">
+            <button class="btn-ghost" id="btn-comentar" onclick="comentarCI()"><i class="ti ti-message"></i> Comentar</button>
+            <button class="btn-ghost" id="btn-ajustes" onclick="decidirCI('ajustes')" style="display:none"><i class="ti ti-edit"></i> Solicitar ajustes</button>
+            <button class="btn btn-primary" id="btn-aprovar" onclick="decidirCI('aprovar')" style="display:none"><i class="ti ti-check"></i> Li e estou de acordo — aprovar e enviar</button>
+            <button class="btn btn-primary" id="btn-editar-ajustes" onclick="editarCIComAjustes()" style="display:none"><i class="ti ti-pencil"></i> Editar e reenviar</button>
+          </div>
+        </div>
       </div>
       <div class="read-indicator" id="modal-read-indicator">
         <i class="ti ti-eye-check"></i>

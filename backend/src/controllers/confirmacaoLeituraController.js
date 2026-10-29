@@ -28,6 +28,10 @@ export const confirmarLeitura = async (req, res, next) => {
       throw new NotFoundError('Comunicação não encontrada', 'COMUNICACAO_NAO_ENCONTRADA');
     }
 
+    if (!['enviada', 'arquivada'].includes(comunicacao.estado)) {
+      throw new ValidationError('Esta C.I. ainda não foi enviada', 'CI_NAO_ENVIADA', []);
+    }
+
     // verifica se já confirmou
     const jaConfirmou = await confirmacaoModel.buscarConfirmacao(id, usuario_id);
     if (jaConfirmou) {

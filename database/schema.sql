@@ -1,6 +1,12 @@
 CREATE DATABASE cidigital;
 USE cidigital;
 
+CREATE TABLE usina (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  nome VARCHAR(100) NOT NULL,
+  logo_url VARCHAR(255) NOT NULL -- caminho relativo ao frontend, ex.: fotos_usinas/Trapiche.png
+);
+
 CREATE TABLE cargos (
   id INT PRIMARY KEY AUTO_INCREMENT,
   nome VARCHAR(50) NOT NULL
@@ -9,7 +15,9 @@ CREATE TABLE cargos (
 CREATE TABLE departamento(
   id INT PRIMARY KEY AUTO_INCREMENT,
   nome VARCHAR(50) NOT NULL,
-  descricao TEXT NOT NULL
+  descricao TEXT NOT NULL,
+  usina_id INT NOT NULL,
+  FOREIGN KEY (usina_id) REFERENCES usina(id)
 );
 
 CREATE TABLE usuario (
@@ -21,20 +29,28 @@ CREATE TABLE usuario (
   departamento_id INT NOT NULL,
   foto_url VARCHAR(255) DEFAULT NULL,
   ativo TINYINT NOT NULL DEFAULT 1, -- 1 = ativo, 0 = inativo (soft delete)
+  usina_id INT NOT NULL,
   FOREIGN KEY (cargo_id) REFERENCES cargos(id),
-  FOREIGN KEY (departamento_id) REFERENCES departamento(id)
+  FOREIGN KEY (departamento_id) REFERENCES departamento(id),
+  FOREIGN KEY (usina_id) REFERENCES usina(id)
 );
 
 CREATE TABLE comunicacao(
   id INT PRIMARY KEY AUTO_INCREMENT,
   titulo VARCHAR(150),
   data_hora DATETIME NOT NULL,
-  estado ENUM('rascunho', 'enviada', 'arquivada') NOT NULL,
+  estado ENUM('rascunho','aguardando_aprovacao','ajustes_solicitados','enviada','arquivada') NOT NULL,
   descricao TEXT NOT NULL,
   usuario_id INT NOT NULL,
   departamento_id INT NOT NULL,
+  em_nome_de_id INT NULL,          -- gerente em cujo nome a C.I. é enviada (exige aprovação)
+  aprovado_por INT NULL,
+  aprovado_em DATETIME NULL,
+  assinatura_aprovacao VARCHAR(140) NULL,
   FOREIGN KEY (usuario_id) REFERENCES usuario(id),
-  FOREIGN KEY (departamento_id) REFERENCES departamento(id)
+  FOREIGN KEY (departamento_id) REFERENCES departamento(id),
+  FOREIGN KEY (em_nome_de_id) REFERENCES usuario(id),
+  FOREIGN KEY (aprovado_por) REFERENCES usuario(id)
 );
 
 CREATE TABLE destinatario(
@@ -95,5 +111,36 @@ CREATE TABLE recuperacao_senha (
   codigo VARCHAR(8) NOT NULL,
   expira_em DATETIME NOT NULL,
   criado_em DATETIME NOT NULL,
+  FOREIGN KEY (usuario_id) REFERENCES usuario(id)
+);
+
+-- Índices (histórico paginado e listagens)
+CREATE INDEX idx_comunicacao_data ON comunicacao (data_hora, id);
+CREATE INDEX idx_comunicacao_dept_data ON comunicacao (departamento_id, data_hora);
+CREATE INDEX idx_comunicacao_usuario_data ON comunicacao (usuario_id, data_hora);
+CREATE INDEX idx_destinatario_ci_usuario ON destinatario (comunicacao_id, usuario_id);
+CREATE INDEX idx_confirmacao_ci_usuario ON confirmacao_leitura (comunicacao_id, usuario_id);
+
+CREATE TABLE comentario_comunicacao (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  comunicacao_id INT NOT NULL,
+  usuario_id INT NOT NULL,
+  tipo ENUM('comentario','solicitacao_ajuste','aprovacao','reenvio') NOT NULL DEFAULT 'comentario',
+  texto TEXT NOT NULL,
+  data_hora DATETIME NOT NULL,
+  FOREIGN KEY (comunicacao_id) REFERENCES comunicacao(id),
+  FOREIGN KEY (usuario_id) REFERENCES usuario(id)
+);
+CREATE INDEX idx_comentario_ci ON comentario_comunicacao (comunicacao_id, data_hora);
+
+-- cópia do texto anterior a cada edição feita após pedido de ajuste
+CREATE TABLE comunicacao_versao (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  comunicacao_id INT NOT NULL,
+  titulo VARCHAR(150),
+  descricao TEXT NOT NULL,
+  usuario_id INT NOT NULL,
+  data_hora DATETIME NOT NULL,
+  FOREIGN KEY (comunicacao_id) REFERENCES comunicacao(id),
   FOREIGN KEY (usuario_id) REFERENCES usuario(id)
 );

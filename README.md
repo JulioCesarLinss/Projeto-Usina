@@ -58,3 +58,15 @@ O sistema é composto por:
 - **Módulo de Auditoria e Histórico**  
 
 ---
+
+---
+
+## Atualização — segurança, usinas, histórico e aprovação do gerente
+
+**Para bancos já existentes, rode em ordem:** `database/migracao_01_usina.sql`, `migracao_02_indices.sql` e `migracao_03_aprovacao.sql` (instalações novas usam apenas `schema.sql` + `dados.sql`).
+
+- **Administrador não lê conteúdo.** Título, descrição, anexos e comentários de C.I. só são acessíveis ao autor, aos destinatários e a gerente/supervisor do setor envolvido. O admin consulta `GET /api/historico` (somente metadados, paginação por cursor, últimos 30 dias por padrão).
+- **Usuário inativo perde o acesso na hora** (o token é validado contra o banco a cada requisição).
+- **Anexos** (`/uploads/<arquivo>`) exigem login e permissão de leitura da C.I.; só as fotos de perfil continuam públicas.
+- **Usinas:** tabela `usina` e `usina_id` em usuários e departamentos; o login devolve a usina e o front destaca a logo dela.
+- **Aprovação do gerente:** ao enviar "em nome de" um gerente, a C.I. fica em `aguardando_aprovacao` e só chega aos destinatários após `POST /:id/aprovar`. O gerente pode `POST /:id/solicitar-ajustes` (texto obrigatório); o autor edita, o texto anterior é guardado em `comunicacao_versao` e reenvia. Comentários entre autor e gerente: `/:id/comentarios`.

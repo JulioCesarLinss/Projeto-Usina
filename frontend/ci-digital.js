@@ -356,9 +356,18 @@ function fazerLogout() {
 // ═══════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════
+// Destaca a logo da usina onde o usuário trabalha (maior); as demais ficam menores
+function aplicarLogoUsina() {
+  const usinaId = state.usuario && state.usuario.usina_id;
+  document.querySelectorAll('.brand-logo-img').forEach(img => {
+    img.style.height = (usinaId && Number(img.dataset.usina) === Number(usinaId)) ? '28px' : '14px';
+  });
+}
+
 async function iniciarApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = '';
+  aplicarLogoUsina();
   const u = state.usuario;
   const iniciais = u.nome.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
   if (u.foto_url) {
@@ -371,7 +380,8 @@ async function iniciarApp() {
   const depto = state.departamentos.find(d => d.id === u.departamento_id);
   document.getElementById('sidebar-depto').textContent = depto ? 'Depto. ' + depto.nome : 'Depto. —';
   document.getElementById('ci-data').value = new Date().toISOString().split('T')[0];
-  await Promise.all([carregarCIs(), carregarNotificacoes()]);
+  carregarGerentes();
+  await Promise.all([carregarCIs(), carregarNotificacoes(), carregarAprovacoes()]);
   atualizarStats();
   const filtrosRow = document.getElementById('ci-filtros-row');
   if (filtrosRow) filtrosRow.style.display = 'flex';
@@ -460,6 +470,8 @@ async function carregarCIs() {
 
 function statusLeituraEnvio(ci) {
   if (ci.estado === 'rascunho')   return '<span class="status-badge pending">Rascunho</span>';
+  if (ci.estado === 'aguardando_aprovacao') return '<span class="status-badge pending">Aguardando aprovação</span>';
+  if (ci.estado === 'ajustes_solicitados')  return '<span class="status-badge pending">Ajustes solicitados</span>';
   if (ci.estado === 'arquivada')  return '<span class="status-badge archived">Arquivada</span>';
   const total = ci.total_destinatarios || 0;
   const lidas = ci.total_lidas || 0;
@@ -487,6 +499,8 @@ function renderizarLinhaCI(ci) {
       statusLabel = statusLeituraEnvio(ci);
     } else {
       if (ci.estado === 'rascunho')   statusLabel = '<span class="status-badge pending">Rascunho</span>';
+      else if (ci.estado === 'aguardando_aprovacao') statusLabel = '<span class="status-badge pending">Aguardando aprovação</span>';
+      else if (ci.estado === 'ajustes_solicitados')  statusLabel = '<span class="status-badge pending">Ajustes solicitados</span>';
       else if (ci.estado === 'arquivada') statusLabel = '<span class="status-badge archived">Arquivada</span>';
       else statusLabel = ci.lida
         ? '<span class="status-badge read">✓ Lida</span>'
@@ -681,9 +695,136 @@ async function abrirCIDoBackend(id, modoAdmin = false) {
     const btnLer = document.getElementById('btn-confirmar-leitura');
     btnLer.disabled = false;
     btnLer.innerHTML = '<i class="ti ti-check"></i> Confirmar Leitura';
+    await renderizarAprovacao(ci, modoAdmin);
   } catch (err) {
     document.getElementById('modal-body-text').textContent = 'Erro ao carregar: ' + err.message;
   }
+}
+
+// ═══════════════════════════════════════════════════════
+//  CI — APROVAÇÃO DO GERENTE E COMENTÁRIOS
+// ═══════════════════════════════════════════════════════
+function escHtml(t) {
+  return String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+async function renderizarAprovacao(ci, modoAdmin) {
+  const box = document.getElementById('modal-aprovacao');
+  const status = document.getElementById('modal-aprovacao-status');
+  const form = document.getElementById('modal-aprovacao-form');
+  const lista = document.getElementById('modal-comentarios');
+  box.style.display = 'none'; form.style.display = 'none'; lista.innerHTML = '';
+  ['btn-ajustes', 'btn-aprovar', 'btn-editar-ajustes'].forEach(id => document.getElementById(id).style.display = 'none');
+
+  const meuId = state.usuario.id;
+  const ehAutor = ci.usuario_id === meuId;
+  const ehGerente = ci.em_nome_de_id === meuId;
+  const emAprovacao = ['aguardando_aprovacao', 'ajustes_solicitados'].includes(ci.estado);
+
+  // enquanto não foi enviada, não há leitura a confirmar
+  if (emAprovacao || ci.estado === 'rascunho') {
+    document.getElementById('btn-confirmar-leitura').style.display = 'none';
+    document.getElementById('modal-read-indicator').style.display = 'none';
+  }
+
+  let texto = '';
+  if (ci.estado === 'aguardando_aprovacao') texto = `Aguardando aprovação de ${escHtml(ci.em_nome_de_nome || 'gerente')}`;
+  else if (ci.estado === 'ajustes_solicitados') texto = `Ajustes solicitados por ${escHtml(ci.em_nome_de_nome || 'gerente')}`;
+  else if (ci.em_nome_de_id && ci.aprovado_em)
+    texto = `Enviada em nome de ${escHtml(ci.em_nome_de_nome)} — aprovada em ${new Date(ci.aprovado_em).toLocaleString('pt-BR')}`;
+  if (!texto) return;
+
+  box.style.display = '';
+  status.innerHTML = '<i class="ti ti-signature"></i> ' + texto;
+
+  // conversa de aprovação: só autor e gerente indicado
+  if (!modoAdmin && (ehAutor || ehGerente)) {
+    try {
+      const dados = await api('GET', '/comunicacoes/' + ci.id + '/comentarios');
+      const rotulo = { solicitacao_ajuste: 'Ajustes solicitados', aprovacao: 'Aprovação', reenvio: 'Reenvio', comentario: 'Comentário' };
+      lista.innerHTML = (dados.dados || []).map(c => `
+        <div style="padding:8px 10px;background:white;border:1px solid var(--border);border-radius:var(--radius);font-size:13px">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">
+            <strong>${escHtml(c.usuario_nome)}</strong> · ${rotulo[c.tipo] || ''} · ${new Date(c.data_hora).toLocaleString('pt-BR')}
+          </div>
+          <div>${escHtml(c.texto).replace(/\n/g, '<br>')}</div>
+        </div>`).join('');
+    } catch (e) { /* conversa indisponível não impede a leitura */ }
+
+    if (emAprovacao) {
+      form.style.display = '';
+      document.getElementById('modal-aprovacao-texto').value = '';
+      if (ehGerente && ci.estado === 'aguardando_aprovacao') {
+        document.getElementById('btn-aprovar').style.display = '';
+        document.getElementById('btn-ajustes').style.display = '';
+      }
+      if (ehAutor && ci.estado === 'ajustes_solicitados')
+        document.getElementById('btn-editar-ajustes').style.display = '';
+    }
+  }
+}
+
+async function comentarCI() {
+  const ci = state.ciAtual; if (!ci) return;
+  const texto = document.getElementById('modal-aprovacao-texto').value.trim();
+  if (texto.length < 3) { toast('Escreva o comentário.', 'error'); return; }
+  try {
+    await api('POST', '/comunicacoes/' + ci.id + '/comentarios', { texto });
+    toast('Comentário enviado.');
+    await abrirCIDoBackend(ci.id);
+  } catch (err) { toast('Erro: ' + err.message, 'error'); }
+}
+
+// acao: 'aprovar' (gerente concorda e libera o envio) ou 'ajustes' (devolve ao autor)
+async function decidirCI(acao) {
+  const ci = state.ciAtual; if (!ci) return;
+  const texto = document.getElementById('modal-aprovacao-texto').value.trim();
+  if (acao === 'ajustes' && texto.length < 3) { toast('Escreva o que deseja que seja modificado.', 'error'); return; }
+  if (acao === 'aprovar' && !confirm('Confirma que leu esta C.I. e está de acordo com o envio em seu nome?')) return;
+  try {
+    await api('POST', '/comunicacoes/' + ci.id + (acao === 'aprovar' ? '/aprovar' : '/solicitar-ajustes'), { texto });
+    toast(acao === 'aprovar' ? 'C.I. aprovada e enviada.' : 'Ajustes solicitados ao autor.');
+    closeModal();
+    await Promise.all([carregarCIs(), carregarNotificacoes(), carregarAprovacoes()]);
+  } catch (err) { toast('Erro: ' + err.message, 'error'); }
+}
+
+async function carregarAprovacoes() {
+  const card = document.getElementById('card-aprovacoes');
+  const lista = document.getElementById('lista-aprovacoes');
+  if (!card) return;
+  try {
+    const { dados } = await api('GET', '/comunicacoes/aprovacoes');
+    const linhas = [
+      ...dados.para_aprovar.map(c => ({ c, rotulo: `Aprovar — de ${escHtml(c.usuario_nome)}` })),
+      ...dados.minhas_em_aprovacao.map(c => ({ c, rotulo: c.estado === 'ajustes_solicitados'
+        ? `Ajustes solicitados por ${escHtml(c.gerente_nome || 'gerente')}` : `Aguardando ${escHtml(c.gerente_nome || 'gerente')}` }))
+    ];
+    card.style.display = linhas.length ? '' : 'none';
+    lista.innerHTML = linhas.map(({ c, rotulo }) => `
+      <div onclick="abrirCIDoBackend(${c.id})" style="display:flex;gap:10px;align-items:center;padding:10px 14px;background:var(--usga-xpale);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer">
+        <span class="ci-num">CI-${String(c.id).padStart(4, '0')}</span>
+        <span style="flex:1;font-weight:500">${escHtml(c.titulo)}</span>
+        <span style="font-size:12px;color:var(--text-muted)">${rotulo}</span>
+      </div>`).join('');
+  } catch (e) { card.style.display = 'none'; }
+}
+
+// o autor abre a C.I. devolvida no formulário para ajustar e reenviar
+async function editarCIComAjustes() {
+  const ci = state.ciAtual; if (!ci) return;
+  closeModal();
+  showPage('nova');
+  editarRascunho(ci.id, encodeURIComponent(ci.titulo), encodeURIComponent(ci.descricao), ci.departamento_id, ci.em_nome_de_id);
+}
+
+async function carregarGerentes() {
+  const sel = document.getElementById('ci-gerente');
+  try {
+    const { dados } = await api('GET', '/usuarios/gerentes');
+    sel.innerHTML = '<option value="">Enviar em meu próprio nome</option>' +
+      dados.map(g => `<option value="${g.id}">${escHtml(g.nome)}</option>`).join('');
+  } catch (e) { /* sem lista: segue só com envio direto */ }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -751,7 +892,7 @@ async function carregarNotificacoes() {
     } else {
       list.innerHTML = naoLidasList.slice(0, 8).map(n => {
         const tempo = n.data_hora ? formatarTempoRelativo(new Date(n.data_hora)) : '';
-        return `<div class="notif-item unread" onclick="marcarNotifLida(${n.id}, this)" style="cursor:pointer">
+        return `<div class="notif-item unread" onclick="marcarNotifLida(${n.id}, this);${n.comunicacao_id ? `abrirCIDoBackend(${n.comunicacao_id})` : ''}" style="cursor:pointer">
           <div class="notif-icon recv"><i class="ti ti-bell"></i></div>
           <div class="notif-body">
             <div class="notif-text">${n.mensagem}</div>
@@ -882,11 +1023,12 @@ async function deletarRascunho(id) {
   }
 }
 
-function editarRascunho(id, titulo, descricao, departamento_id) {
+function editarRascunho(id, titulo, descricao, departamento_id, gerente_id = null) {
   state.rascunhoAtual = id;
   document.getElementById('ci-titulo').value = decodeURIComponent(titulo);
   document.getElementById('ci-descricao').value = decodeURIComponent(descricao);
   document.getElementById('ci-departamento').value = departamento_id;
+  document.getElementById('ci-gerente').value = gerente_id || '';
   onDepartamentoChange();
   document.getElementById('btn-cancelar-rascunho').style.display = '';
   document.getElementById('btn-enviar-ci').innerHTML = '<i class="ti ti-send"></i> Enviar Rascunho';
@@ -917,6 +1059,8 @@ async function enviarCI(estado) {
     destinatarios = Array.from(checks).map(c => ({ usuario_id: parseInt(c.value), departamento_id }));
   }
 
+  const em_nome_de_id = parseInt(document.getElementById('ci-gerente').value) || null;
+
   const btn = document.getElementById('btn-enviar-ci');
   const btnRasc = document.getElementById('btn-salvar-rascunho');
   btn.disabled = true;
@@ -925,9 +1069,9 @@ async function enviarCI(estado) {
   try {
     let data;
     if (state.rascunhoAtual) {
-      data = await api('PUT', '/comunicacoes/' + state.rascunhoAtual, { titulo, descricao, departamento_id, estado, destinatarios });
+      data = await api('PUT', '/comunicacoes/' + state.rascunhoAtual, { titulo, descricao, departamento_id, estado, destinatarios, em_nome_de_id });
     } else {
-      data = await api('POST', '/comunicacoes/criar', { titulo, descricao, departamento_id, estado, destinatarios });
+      data = await api('POST', '/comunicacoes/criar', { titulo, descricao, departamento_id, estado, destinatarios, em_nome_de_id });
     }
     const ciId = data.dados?.id || state.rascunhoAtual;
     const arquivo = document.getElementById('ci-arquivo').files[0];
@@ -944,10 +1088,11 @@ async function enviarCI(estado) {
       cancelarEdicaoRascunho();
       await carregarRascunhos();
     } else {
-      toast('C.I enviada com sucesso!');
-      limparFormularioCI();
+      toast(data.dados?.estado === 'aguardando_aprovacao'
+        ? 'C.I enviada para aprovação do gerente.' : 'C.I enviada com sucesso!');
+      cancelarEdicaoRascunho();
       showPage('dashboard');
-      await Promise.all([carregarCIs(), carregarNotificacoes(), atualizarStats()]);
+      await Promise.all([carregarCIs(), carregarNotificacoes(), atualizarStats(), carregarAprovacoes()]);
     }
   } catch (err) {
     toast('Erro: ' + err.message, 'error');
@@ -962,6 +1107,7 @@ function limparFormularioCI() {
   document.getElementById('ci-titulo').value = '';
   document.getElementById('ci-descricao').value = '';
   document.getElementById('ci-departamento').value = '';
+  document.getElementById('ci-gerente').value = '';
   document.getElementById('ci-arquivo').value = '';
   document.getElementById('upload-label').textContent = 'PDF, DOCX, XLSX, PNG — máx. 20 MB por arquivo';
   document.getElementById('ci-destinatarios-wrap').style.display = 'none';
@@ -998,6 +1144,7 @@ function showPage(name) {
     return;
   }
   if (name === 'auditoria') carregarAuditoria(1);
+  if (name === 'historico') iniciarHistorico();
   if (name === 'visaogeral') carregarVisaoGeral();
   if (name === 'controle') carregarControleAcesso();
   if (name === 'relatorios') carregarRelatorios();
@@ -1023,7 +1170,7 @@ function showPage(name) {
       document.getElementById(id).value = '';
     });
   }
-  ['dashboard','nova','auditoria','configuracoes','visaogeral','controle','relatorios'].forEach(p => {
+  ['dashboard','nova','auditoria','historico','configuracoes','visaogeral','controle','relatorios'].forEach(p => {
     var el = document.getElementById('page-'+p);
     if(el) el.style.display = (p === name) ? '' : 'none';
   });
@@ -1031,6 +1178,7 @@ function showPage(name) {
     dashboard: 'Tela Inicial <span>/ Visão Geral</span>',
     nova: 'Nova C.I <span>/ Redigir Comunicação</span>',
     auditoria: 'Auditoria <span>/ Histórico do Sistema</span>',
+    historico: 'Histórico de C.I <span>/ Somente Metadados</span>',
     visaogeral: 'Visão Geral <span>/ Monitoramento</span>',
     cis: 'Minhas C.I <span>/ Caixa de Entrada</span>',
     configuracoes: 'Configurações <span>/ Minha Conta</span>',
@@ -1058,7 +1206,8 @@ function openCI(num, subject, from, to, prio, date, body, fromName) {
 
 async function baixarAnexo(url, nome) {
   try {
-    const resp = await fetch(url);
+    const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + state.token } });
+    if (!resp.ok) throw new Error('acesso negado ou arquivo indisponível');
     const blob = await resp.blob();
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1184,6 +1333,64 @@ function renderizarPaginacaoAudit() {
 }
 
 // ═══════════════════════════════════════════════════════
+//  HISTÓRICO DE C.I (administrador — somente metadados)
+// ═══════════════════════════════════════════════════════
+const histState = { cursor: null, iniciado: false };
+
+function iniciarHistorico() {
+  const sel = document.getElementById('hist-dept');
+  if (!histState.iniciado) {
+    state.departamentos.forEach(d => {
+      const o = document.createElement('option');
+      o.value = d.id; o.textContent = d.nome;
+      sel.appendChild(o);
+    });
+    histState.iniciado = true;
+  }
+  carregarHistorico(true);
+}
+
+async function carregarHistorico(reiniciar = true) {
+  const tbody = document.getElementById('hist-tbody');
+  const btnMais = document.getElementById('hist-mais');
+  if (reiniciar) {
+    histState.cursor = null;
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">Carregando...</td></tr>';
+  }
+  const q = new URLSearchParams({ limite: 30 });
+  const dept = document.getElementById('hist-dept').value;
+  const estado = document.getElementById('hist-estado').value;
+  const inicio = document.getElementById('hist-inicio').value;
+  if (dept) q.set('departamento_id', dept);
+  if (estado) q.set('estado', estado);
+  if (inicio) q.set('data_inicio', inicio);
+  if (!reiniciar && histState.cursor) q.set('cursor', histState.cursor);
+
+  try {
+    const data = await api('GET', '/historico?' + q.toString());
+    const linhas = (data.dados || []).map(h => `<tr>
+      <td><span class="ci-num">CI-${String(h.id).padStart(4, '0')}</span></td>
+      <td class="ci-date">${new Date(h.data_hora).toLocaleString('pt-BR')}</td>
+      <td style="font-weight:500">${h.remetente_nome}</td>
+      <td>${h.departamento_nome}</td>
+      <td>${h.estado}</td>
+      <td>${h.total_lidas}/${h.total_destinatarios}</td>
+    </tr>`).join('');
+    if (reiniciar) {
+      tbody.innerHTML = linhas || '<tr><td colspan="6"><div class="empty-state"><i class="ti ti-clipboard-off"></i><p>Nenhum registro no período.</p></div></td></tr>';
+    } else {
+      tbody.insertAdjacentHTML('beforeend', linhas);
+    }
+    histState.cursor = data.proximo_cursor;
+    btnMais.style.display = data.tem_mais ? '' : 'none';
+    const desde = new Date(data.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR');
+    document.getElementById('hist-aviso').textContent = 'Exibindo desde ' + desde + (inicio ? '' : ' (padrão: últimos 30 dias)');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="ti ti-alert-circle"></i><p>Erro ao carregar: ${err.message}</p></div></td></tr>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
 //  DASHBOARD — departamentos e histórico
 // ═══════════════════════════════════════════════════════
 const NOMES_DEPT = {
@@ -1267,6 +1474,8 @@ function aplicarPermissoesFrontend(usuario) {
   document.querySelectorAll('.admin-supervisor-only').forEach(el => {
     el.style.display = (cargo === 1 || cargo === 3) ? '' : 'none';
   });
+  // telas que listam conteúdo de C.I. não se aplicam ao administrador
+  if (cargo === 1) document.querySelectorAll('.sem-admin').forEach(el => { el.style.display = 'none'; });
 }
 
 function validarAcessoPagina(pagina, usuario) {
@@ -1275,6 +1484,8 @@ function validarAcessoPagina(pagina, usuario) {
   if (pagina === 'visaogeral' && cargo > 3) return false;
   if (pagina === 'relatorios' && cargo > 2) return false;
   if (pagina === 'auditoria' && cargo > 2) return false;
+  if (pagina === 'historico' && cargo !== 1) return false;
+  if (pagina === 'visaogeral' && cargo === 1) return false; // admin não vê conteúdo
   return true;
 }
 

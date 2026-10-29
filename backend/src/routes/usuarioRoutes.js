@@ -34,6 +34,9 @@ router.get('/', verificarToken, verificarAdmin, usuarioController.listarUsuarios
 // Listar usuários de um departamento — usado no formulário de nova CI
 router.get('/departamento/:id', verificarToken, usuarioController.listarPorDepartamento);
 
+// Gerentes da minha usina — usado em "enviar em nome de" (antes de /:id)
+router.get('/gerentes', verificarToken, usuarioController.listarGerentes);
+
 // Buscar usuário por ID — qualquer usuário logado pode ver
 router.get('/:id', verificarToken, usuarioController.buscarUsuario);
 

@@ -11,8 +11,11 @@ import confirmacaoRoutes from './src/routes/confirmacaoLeituraRoutes.js';
 import notificacaoRoutes from './src/routes/notificacaoRoutes.js';
 import destinatarioRoutes from './src/routes/destinatarioRoutes.js';
 import uploadRoutes from './src/routes/uploadRoutes.js';
+import { baixarAnexoProtegido } from './src/controllers/uploadController.js';
+import { verificarToken } from './src/middlewares/authMiddleware.js';
 import auditoriaRoutes from './src/routes/auditoriaRoutes.js';
 import relatorioRoutes from './src/routes/relatorioRoutes.js';
+import historicoRoutes from './src/routes/historicoRoutes.js';
 import { handleError, asyncHandler } from './src/middlewares/errorMiddleware.js';
 import { securityHeaders } from './src/middlewares/securityHeadersMiddleware.js';
 import { rateLimiter } from './src/middlewares/rateLimitMiddleware.js';
@@ -99,7 +102,10 @@ app.get('/api/health/completo', asyncHandler(async (req, res) => {
 
 // ==================== ARQUIVOS ESTÁTICOS ====================
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Fotos de perfil continuam públicas (usadas em <img>/CSS, que não enviam token)
+app.use('/uploads/fotos', express.static(path.join(__dirname, 'uploads', 'fotos')));
+// Anexos de C.I. exigem login e permissão de leitura da C.I. correspondente
+app.get('/uploads/:arquivo', verificarToken, baixarAnexoProtegido);
 
 // ==================== ROTAS DA APLICAÇÃO ====================
 app.use('/api/usuarios', usuarioRoutes);
@@ -111,6 +117,7 @@ app.use('/api/destinatarios', destinatarioRoutes);
 app.use('/api/departamentos', departamentoRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
 app.use('/api/relatorios', relatorioRoutes);
+app.use('/api/historico', historicoRoutes);
 
 // ==================== ROTA NÃO ENCONTRADA ====================
 app.use((req, res) => {

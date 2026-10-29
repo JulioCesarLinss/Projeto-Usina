@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { AuthenticationError, AuthorizationError } from '../utils/appError.js';
+import * as usuarioModel from '../models/usuarioModel.js';
 
 // Lista de tokens cancelados pelo logout
 const tokenBlacklist = new Set();
@@ -24,7 +25,7 @@ export const revogarToken = (token) => {
   blacklistExpiry.set(token, Date.now() + 8 * 60 * 60 * 1000);
 };
 
-export const verificarToken = (req, res, next) => {
+export const verificarToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -57,12 +58,19 @@ export const verificarToken = (req, res, next) => {
     if (!decoded.id || !decoded.email || !decoded.cargo_id)
       throw new AuthenticationError('Token inválido', 'PAYLOAD_INVALIDO');
 
-    // Guarda só o necessário — não expõe dados extras
+    // Usuário inativado (ex.: demitido) perde o acesso imediatamente,
+    // sem esperar o token expirar. Cargo e departamento vêm do banco,
+    // então mudanças também valem na hora.
+    const atual = await usuarioModel.buscarId(decoded.id);
+    if (!atual || atual.ativo === 0)
+      throw new AuthenticationError('Usuário inativo', 'USUARIO_INATIVO');
+
     req.usuario = {
-      id: decoded.id,
-      email: decoded.email,
-      cargo_id: decoded.cargo_id,
-      departamento_id: decoded.departamento_id
+      id: atual.id,
+      email: atual.email,
+      cargo_id: atual.cargo_id,
+      departamento_id: atual.departamento_id,
+      usina_id: atual.usina_id
     };
 
     // Guardado para uso no logout

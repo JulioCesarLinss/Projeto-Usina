@@ -21,3 +21,8 @@ export const verificarDestinatario = async (comunicacao_id, usuario_id) => {
   const [results] = await pool.query(sql, [comunicacao_id, usuario_id]);
   return results[0];
 };
+
+export const removerPorCI = async (comunicacao_id) => {
+  const [result] = await pool.query('DELETE FROM destinatario WHERE comunicacao_id = ?', [comunicacao_id]);
+  return result;
+};

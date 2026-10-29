@@ -15,3 +15,8 @@ export const listarAnexosPorCI = async (comunicacao_id) => {
   );
   return rows;
 };
+
+export const buscarAnexoPorCaminho = async (caminho) => {
+  const [rows] = await pool.execute('SELECT * FROM anexo WHERE caminho = ? LIMIT 1', [caminho]);
+  return rows[0];
+};

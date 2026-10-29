@@ -1,7 +1,9 @@
 import pool from '../config/db.js';
 
 export const criarUsuario = async (nome, email, senha, cargo_id, departamento_id) => {
-  const sql = 'INSERT INTO usuario (nome, email, senha, cargo_id, departamento_id) VALUES (?, ?, ?, ?, ?)';
+  // a usina do usuário é sempre a do departamento escolhido (não vem do cliente)
+  const sql = `INSERT INTO usuario (nome, email, senha, cargo_id, departamento_id, usina_id)
+    SELECT ?, ?, ?, ?, d.id, d.usina_id FROM departamento d WHERE d.id = ?`;
   const [result] = await pool.query(sql, [nome, email, senha, cargo_id, departamento_id]);
   return result;
 };
@@ -14,15 +16,23 @@ export const buscarEmail = async (email) => {
 };
 
 export const buscarSenhaEmail = async (email) => {
-  const sql = 'SELECT id, nome, email, senha, cargo_id, departamento_id, foto_url, ativo FROM usuario WHERE email = ?';
+  const sql = 'SELECT id, nome, email, senha, cargo_id, departamento_id, usina_id, foto_url, ativo FROM usuario WHERE email = ?';
   const [results] = await pool.query(sql, [email]);
   return results[0];
 };
 
 export const buscarId = async (id) => {
-  const sql = 'SELECT id, nome, email, cargo_id, departamento_id, foto_url, ativo FROM usuario WHERE id = ?';
+  const sql = 'SELECT id, nome, email, cargo_id, departamento_id, usina_id, foto_url, ativo FROM usuario WHERE id = ?';
   const [results] = await pool.query(sql, [id]);
   return results[0];
+};
+
+// gerentes ativos da mesma usina (para "enviar em nome de")
+export const listarGerentes = async (usina_id, excluir_id) => {
+  const sql = `SELECT id, nome, departamento_id FROM usuario
+               WHERE cargo_id = 2 AND ativo = 1 AND usina_id = ? AND id <> ? ORDER BY nome`;
+  const [rows] = await pool.query(sql, [usina_id, excluir_id]);
+  return rows;
 };
 
 export const atualizarFotoUrl = async (id, foto_url) => {
