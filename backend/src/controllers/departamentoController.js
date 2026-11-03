@@ -29,7 +29,8 @@ export const criarDepartamento = async (req, res, next) => {
     const { nome, descricao } = req.body;
     if (!nome || nome.trim().length < 2)
       throw new ValidationError('Nome do departamento obrigatório (mínimo 2 caracteres)', 'NOME_INVALIDO', []);
-    await departamentoModel.criarDepartamento(nome.trim(), (descricao || '').trim());
+    // o departamento pertence à usina de quem o cria
+    await departamentoModel.criarDepartamento(nome.trim(), (descricao || '').trim(), req.usuario.usina_id);
     res.status(201).json({ sucesso: true, mensagem: 'Departamento criado com sucesso' });
   } catch (err) {
     next(err);

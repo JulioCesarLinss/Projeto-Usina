@@ -33,6 +33,13 @@ export const bloquearAdminConteudo = (req, res, next) => {
   next();
 };
 
+// Para rotas que devolvem só METADADOS da C.I. (quem leu, quando):
+// o administrador pode ver; os demais seguem a mesma regra do conteúdo.
+export const verificarAcessoMetadadosCI = (req, res, next) => {
+  if (req.usuario && req.usuario.cargo_id === 1) return next();
+  return verificarAcessoCI(req, res, next);
+};
+
 export const verificarAcessoCI = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);

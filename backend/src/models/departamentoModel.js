@@ -1,8 +1,8 @@
 import pool from '../config/db.js';
 
-export const criarDepartamento = async (nome, descricao) => {
-  const sql = 'INSERT INTO departamento (nome, descricao) VALUES (?, ?)';
-  const [result] = await pool.query(sql, [nome, descricao]);
+export const criarDepartamento = async (nome, descricao, usina_id) => {
+  const sql = 'INSERT INTO departamento (nome, descricao, usina_id) VALUES (?, ?, ?)';
+  const [result] = await pool.query(sql, [nome, descricao, usina_id]);
   return result;
 };
 
