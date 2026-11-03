@@ -8,7 +8,8 @@ INSERT INTO cargos(id,nome) VALUES
 (1,'administrador_do_sistema'),
 (2,'gerente_administrativo'),
 (3,'supervisor'),
-(4,'auxiliar_administrativo');
+(4,'auxiliar_administrativo'),
+(5,'secretario');
 
 
 INSERT INTO departamento(id,nome,descricao,usina_id) VALUES

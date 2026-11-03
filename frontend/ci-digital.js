@@ -820,6 +820,8 @@ async function editarCIComAjustes() {
 
 async function carregarGerentes() {
   const sel = document.getElementById('ci-gerente');
+  sel.innerHTML = '<option value="">Enviar em meu próprio nome</option>';
+  if (state.usuario?.cargo_id !== 5) return; // só o secretário envia em nome de um gerente
   try {
     const { dados } = await api('GET', '/usuarios/gerentes');
     sel.innerHTML = '<option value="">Enviar em meu próprio nome</option>' +
@@ -1152,7 +1154,7 @@ function showPage(name) {
   if (name === 'configuracoes' && state.usuario) {
     const u = state.usuario;
     const iniciais = (u.nome || '').split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
-    const NOMES_CARGO = { 1: 'Administrador Geral', 2: 'Gerente Administrativo', 3: 'Supervisor', 4: 'Funcionário' };
+    const NOMES_CARGO = { 1: 'Administrador Geral', 2: 'Gerente Administrativo', 3: 'Supervisor', 4: 'Funcionário', 5: 'Secretário' };
     const configAvatar = document.getElementById('config-avatar');
     if (u.foto_url) {
       aplicarFotoAvatar('http://localhost:3000' + u.foto_url);
@@ -1474,6 +1476,10 @@ function aplicarPermissoesFrontend(usuario) {
   document.querySelectorAll('.admin-supervisor-only').forEach(el => {
     el.style.display = (cargo === 1 || cargo === 3) ? '' : 'none';
   });
+  // "enviar em nome de um gerente" é exclusivo do secretário
+  document.querySelectorAll('.secretario-only').forEach(el => {
+    el.style.display = cargo === 5 ? '' : 'none';
+  });
   // telas que listam conteúdo de C.I. não se aplicam ao administrador
   if (cargo === 1) document.querySelectorAll('.sem-admin').forEach(el => { el.style.display = 'none'; });
 }
@@ -1708,8 +1714,8 @@ function renderizarPaginacaoVG() {
 // ═══════════════════════════════════════════════════════
 //  CONTROLE DE ACESSO
 // ═══════════════════════════════════════════════════════
-const CA_CARGOS = { 1: 'Administrador Geral', 2: 'Gerente Administrativo', 3: 'Supervisor', 4: 'Funcionário' };
-const CA_CORES = { 1: '#C8382A', 2: '#1A6B9A', 3: '#B07A18', 4: '#43931F' };
+const CA_CARGOS = { 1: 'Administrador Geral', 2: 'Gerente Administrativo', 3: 'Supervisor', 4: 'Funcionário', 5: 'Secretário' };
+const CA_CORES = { 1: '#C8382A', 2: '#1A6B9A', 3: '#B07A18', 4: '#43931F', 5: '#7A4BAF' };
 let caUsuariosTodos = [];
 
 async function carregarControleAcesso() {

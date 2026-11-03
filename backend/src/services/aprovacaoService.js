@@ -1,11 +1,16 @@
 import * as usuarioModel from '../models/usuarioModel.js';
 import * as destinatarioModel from '../models/destinatarioModel.js';
 import * as notificacaoModel from '../models/notificacaoModel.js';
-import { ValidationError } from '../utils/appError.js';
+import { ValidationError, AuthorizationError } from '../utils/appError.js';
 
-// O gerente indicado precisa existir, estar ativo, ser gerente (cargo 2),
-// da mesma usina de quem envia, e não ser o próprio remetente.
+// único cargo que pode enviar C.I. em nome de um gerente
+export const CARGO_SECRETARIO = 5;
+
+// Só o secretário envia "em nome de". O gerente indicado precisa existir,
+// estar ativo, ser gerente (cargo 2), da mesma usina de quem envia, e não ser o próprio remetente.
 export const validarGerente = async (em_nome_de_id, remetente) => {
+  if (remetente.cargo_id !== CARGO_SECRETARIO)
+    throw new AuthorizationError('Apenas secretários podem enviar C.I. em nome de um gerente', 'ACESSO_NEGADO');
   const id = parseInt(em_nome_de_id);
   const gerente = id ? await usuarioModel.buscarId(id) : null;
   if (!gerente || gerente.ativo === 0 || gerente.cargo_id !== 2

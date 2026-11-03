@@ -7,8 +7,10 @@ import {
   ConflictError, 
   NotFoundError,
   AuthenticationError,
+  AuthorizationError,
   DatabaseError
 } from '../utils/appError.js';
+import { CARGO_SECRETARIO } from '../services/aprovacaoService.js';
 
 import { revogarToken } from '../middlewares/authMiddleware.js';
 import { registrarLog, getClientIP } from '../middlewares/auditMiddleware.js';
@@ -598,6 +600,9 @@ export const listarPorDepartamento = async (req, res, next) => {
 
 export const listarGerentes = async (req, res, next) => {
   try {
+    // a lista só serve para o "enviar em nome de", exclusivo do secretário
+    if (req.usuario.cargo_id !== CARGO_SECRETARIO)
+      throw new AuthorizationError('Apenas secretários podem enviar C.I. em nome de um gerente', 'ACESSO_NEGADO');
     const dados = await usuarioModel.listarGerentes(req.usuario.usina_id, req.usuario.id);
     res.status(200).json({ sucesso: true, dados });
   } catch (err) {
