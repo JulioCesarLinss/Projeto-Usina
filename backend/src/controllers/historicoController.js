@@ -3,7 +3,7 @@ import { ValidationError, DatabaseError } from '../utils/appError.js';
 
 const ESTADOS = ['enviada', 'arquivada'];
 const DATA_RE = /^\d{4}-\d{2}-\d{2}$/;
-const POR_PAGINA = 30; // histórico completo, carregado em páginas de 30 C.I.s
+const POR_PAGINA = 15; // histórico completo, carregado em páginas de 15 C.I.s
 
 const decodificarCursor = (raw) => {
   try {

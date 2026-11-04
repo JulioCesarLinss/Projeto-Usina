@@ -1343,7 +1343,7 @@ function renderizarPaginacaoAudit() {
 // ═══════════════════════════════════════════════════════
 //  HISTÓRICO DE C.I (administrador — somente metadados)
 // ═══════════════════════════════════════════════════════
-// Páginas de 30 C.I.s com paginação por cursor:
+// Páginas de 15 C.I.s (tamanho definido no backend) com paginação por cursor:
 // cursores[i] é o cursor que abre a página i+1 (a primeira página não tem cursor)
 const histState = { cursores: [null], pagina: 1, iniciado: false };
 const HIST_ESTADOS = { enviada: 'Enviada', arquivada: 'Arquivada' };
