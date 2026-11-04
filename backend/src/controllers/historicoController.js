@@ -3,7 +3,7 @@ import { ValidationError, DatabaseError } from '../utils/appError.js';
 
 const ESTADOS = ['enviada', 'arquivada'];
 const DATA_RE = /^\d{4}-\d{2}-\d{2}$/;
-const JANELA_PADRAO_DIAS = 30; // carregamento parcial: por padrão só os últimos 30 dias
+const POR_PAGINA = 30; // histórico completo, carregado em páginas de 30 C.I.s
 
 const decodificarCursor = (raw) => {
   try {
@@ -19,28 +19,34 @@ const decodificarCursor = (raw) => {
 export const listarHistorico = async (req, res, next) => {
   try {
     const { departamento_id, usuario_id, estado, data_inicio, data_fim, cursor } = req.query;
-    const limite = Math.min(Math.max(parseInt(req.query.limite) || 30, 1), 100);
+    const limite = POR_PAGINA;
 
     if (estado && !ESTADOS.includes(estado))
       throw new ValidationError('Estado inválido', 'ESTADO_INVALIDO', []);
     if ((data_inicio && !DATA_RE.test(data_inicio)) || (data_fim && !DATA_RE.test(data_fim)))
       throw new ValidationError('Datas devem estar no formato AAAA-MM-DD', 'DATA_INVALIDA', []);
+    if (data_inicio && data_fim && data_inicio > data_fim)
+      throw new ValidationError('A data inicial deve ser anterior à final', 'PERIODO_INVALIDO', []);
 
-    const inicioPadrao = new Date(Date.now() - JANELA_PADRAO_DIAS * 86400000)
-      .toISOString().slice(0, 10);
+    const filtros = {
+      usina_id: req.usuario.usina_id,
+      departamento_id: parseInt(departamento_id) || null,
+      usuario_id: parseInt(usuario_id) || null,
+      estado: estado || null,
+      data_inicio: data_inicio || null,
+      data_fim: data_fim || null
+    };
 
-    let rows;
+    let rows, total;
     try {
-      rows = await historicoModel.listarHistorico({
-        usina_id: req.usuario.usina_id,
-        departamento_id: parseInt(departamento_id) || null,
-        usuario_id: parseInt(usuario_id) || null,
-        estado: estado || null,
-        data_inicio: data_inicio || inicioPadrao,
-        data_fim: data_fim || null,
-        cursor: cursor ? decodificarCursor(cursor) : null,
-        limite
-      });
+      [rows, total] = await Promise.all([
+        historicoModel.listarHistorico({
+          ...filtros,
+          cursor: cursor ? decodificarCursor(cursor) : null,
+          limite
+        }),
+        historicoModel.contarHistorico(filtros)
+      ]);
     } catch (err) {
       if (err instanceof ValidationError) throw err;
       throw new DatabaseError('Erro ao buscar histórico', 'ERRO_BUSCAR_HISTORICO');
@@ -58,7 +64,8 @@ export const listarHistorico = async (req, res, next) => {
       dados: pagina.map(({ cursor_data, ...resto }) => resto),
       proximo_cursor,
       tem_mais: temMais,
-      data_inicio: data_inicio || inicioPadrao
+      total,
+      por_pagina: limite
     });
   } catch (err) {
     next(err);

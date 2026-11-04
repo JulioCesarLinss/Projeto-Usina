@@ -1343,7 +1343,10 @@ function renderizarPaginacaoAudit() {
 // ═══════════════════════════════════════════════════════
 //  HISTÓRICO DE C.I (administrador — somente metadados)
 // ═══════════════════════════════════════════════════════
-const histState = { cursor: null, iniciado: false };
+// Páginas de 30 C.I.s com paginação por cursor:
+// cursores[i] é o cursor que abre a página i+1 (a primeira página não tem cursor)
+const histState = { cursores: [null], pagina: 1, iniciado: false };
+const HIST_ESTADOS = { enviada: 'Enviada', arquivada: 'Arquivada' };
 
 function iniciarHistorico() {
   const sel = document.getElementById('hist-dept');
@@ -1358,44 +1361,72 @@ function iniciarHistorico() {
   carregarHistorico(true);
 }
 
+// reiniciar = true: volta para a página 1 (ao abrir a tela ou mudar um filtro)
 async function carregarHistorico(reiniciar = true) {
   const tbody = document.getElementById('hist-tbody');
-  const btnMais = document.getElementById('hist-mais');
-  if (reiniciar) {
-    histState.cursor = null;
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">Carregando...</td></tr>';
-  }
-  const q = new URLSearchParams({ limite: 30 });
+  if (reiniciar) { histState.cursores = [null]; histState.pagina = 1; }
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">Carregando...</td></tr>';
+
+  const q = new URLSearchParams();
   const dept = document.getElementById('hist-dept').value;
   const estado = document.getElementById('hist-estado').value;
   const inicio = document.getElementById('hist-inicio').value;
+  const fim = document.getElementById('hist-fim').value;
   if (dept) q.set('departamento_id', dept);
   if (estado) q.set('estado', estado);
   if (inicio) q.set('data_inicio', inicio);
-  if (!reiniciar && histState.cursor) q.set('cursor', histState.cursor);
+  if (fim) q.set('data_fim', fim);
+  const cursor = histState.cursores[histState.pagina - 1];
+  if (cursor) q.set('cursor', cursor);
 
   try {
     const data = await api('GET', '/historico?' + q.toString());
     const linhas = (data.dados || []).map(h => `<tr>
       <td><span class="ci-num">CI-${String(h.id).padStart(4, '0')}</span></td>
       <td class="ci-date">${new Date(h.data_hora).toLocaleString('pt-BR')}</td>
-      <td style="font-weight:500">${h.remetente_nome}</td>
-      <td>${h.departamento_nome}</td>
-      <td>${h.estado}</td>
+      <td style="font-weight:500">${escHtml(h.remetente_nome)}</td>
+      <td>${escHtml(h.departamento_nome)}</td>
+      <td>${HIST_ESTADOS[h.estado] || h.estado}</td>
       <td>${h.total_lidas}/${h.total_destinatarios}</td>
     </tr>`).join('');
-    if (reiniciar) {
-      tbody.innerHTML = linhas || '<tr><td colspan="6"><div class="empty-state"><i class="ti ti-clipboard-off"></i><p>Nenhum registro no período.</p></div></td></tr>';
-    } else {
-      tbody.insertAdjacentHTML('beforeend', linhas);
-    }
-    histState.cursor = data.proximo_cursor;
-    btnMais.style.display = data.tem_mais ? '' : 'none';
-    const desde = new Date(data.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR');
-    document.getElementById('hist-aviso').textContent = 'Exibindo desde ' + desde + (inicio ? '' : ' (padrão: últimos 30 dias)');
+    tbody.innerHTML = linhas || '<tr><td colspan="6"><div class="empty-state"><i class="ti ti-clipboard-off"></i><p>Nenhum registro encontrado.</p></div></td></tr>';
+
+    // guarda o cursor da próxima página, se existir
+    histState.cursores[histState.pagina] = data.tem_mais ? data.proximo_cursor : undefined;
+    const totalPaginas = Math.max(1, Math.ceil(data.total / data.por_pagina));
+    renderizarPaginacaoHistorico(totalPaginas, data.tem_mais);
+
+    let periodo = 'histórico completo';
+    if (inicio && fim) periodo = `de ${formatarDataBR(inicio)} até ${formatarDataBR(fim)}`;
+    else if (inicio) periodo = `desde ${formatarDataBR(inicio)}`;
+    else if (fim) periodo = `até ${formatarDataBR(fim)}`;
+    document.getElementById('hist-aviso').textContent = `${data.total} C.I · ${periodo}`;
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="ti ti-alert-circle"></i><p>Erro ao carregar: ${err.message}</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="ti ti-alert-circle"></i><p>Erro ao carregar: ${escHtml(err.message)}</p></div></td></tr>`;
   }
+}
+
+function renderizarPaginacaoHistorico(totalPaginas, temMais) {
+  const p = histState.pagina;
+  let html = '';
+  if (p > 1) html += `<button class="page-btn" onclick="mudarPaginaHistorico(-1)" title="Página anterior"><i class="ti ti-chevron-left"></i></button>`;
+  html += `<span class="table-info" style="padding:0 8px">Página ${p} de ${totalPaginas}</span>`;
+  if (temMais) html += `<button class="page-btn" onclick="mudarPaginaHistorico(1)" title="Próxima página"><i class="ti ti-chevron-right"></i></button>`;
+  document.getElementById('hist-pagination').innerHTML = html;
+}
+
+function mudarPaginaHistorico(delta) {
+  histState.pagina += delta;
+  carregarHistorico(false);
+}
+
+function limparFiltrosHistorico() {
+  ['hist-dept', 'hist-estado', 'hist-inicio', 'hist-fim'].forEach(id => { document.getElementById(id).value = ''; });
+  carregarHistorico(true);
+}
+
+function formatarDataBR(iso) {
+  return new Date(iso + 'T00:00:00').toLocaleDateString('pt-BR');
 }
 
 // ═══════════════════════════════════════════════════════

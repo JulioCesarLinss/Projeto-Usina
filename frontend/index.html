@@ -534,6 +534,10 @@
         <label style="font-size:12px;color:var(--text-muted)">Desde
           <input type="date" id="hist-inicio" onchange="carregarHistorico(true)">
         </label>
+        <label style="font-size:12px;color:var(--text-muted)">Até
+          <input type="date" id="hist-fim" onchange="carregarHistorico(true)">
+        </label>
+        <button class="btn-ghost" onclick="limparFiltrosHistorico()"><i class="ti ti-x"></i> Limpar</button>
         <span id="hist-aviso" style="font-size:12px;color:var(--text-muted)"></span>
       </div>
       <table class="ci-table">
@@ -546,7 +550,7 @@
       </table>
       <div class="table-footer">
         <div class="table-info">O conteúdo das comunicações não é exibido para administradores.</div>
-        <button class="btn-ghost" id="hist-mais" onclick="carregarHistorico(false)" style="display:none">Carregar mais</button>
+        <div class="pagination" id="hist-pagination" style="align-items:center"></div>
       </div>
     </div>
   </div>
