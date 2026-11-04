@@ -1,7 +1,11 @@
 // ═══════════════════════════════════════════════════════
 //  CONFIGURAÇÃO DA API
 // ═══════════════════════════════════════════════════════
-const API_URL = 'http://localhost:3000/api';
+// Rodando na própria máquina usa o backend local; publicado (Vercel) usa o do Railway
+const BACKEND_URL = ['localhost', '127.0.0.1'].includes(location.hostname)
+  ? 'http://localhost:3000'
+  : 'https://projeto-usina-production.up.railway.app';
+const API_URL = BACKEND_URL + '/api';
 
 // ═══════════════════════════════════════════════════════
 //  ESTADO GLOBAL
@@ -266,7 +270,7 @@ async function previewFotoPerfil(input) {
   formData.append('foto', file);
 
   try {
-    const resp = await fetch(`http://localhost:3000/api/usuarios/${state.usuario.id}/foto`, {
+    const resp = await fetch(`${API_URL}/usuarios/${state.usuario.id}/foto`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + state.token },
       body: formData
@@ -274,7 +278,7 @@ async function previewFotoPerfil(input) {
     const data = await resp.json();
     if (!data.sucesso) throw new Error(data.erro || 'Erro ao salvar');
 
-    const url = 'http://localhost:3000' + data.dados.foto_url;
+    const url = BACKEND_URL + data.dados.foto_url;
     state.usuario.foto_url = data.dados.foto_url;
     localStorage.setItem('ci_usuario', JSON.stringify(state.usuario));
     aplicarFotoAvatar(url);
@@ -371,7 +375,7 @@ async function iniciarApp() {
   const u = state.usuario;
   const iniciais = u.nome.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
   if (u.foto_url) {
-    aplicarFotoAvatar('http://localhost:3000' + u.foto_url);
+    aplicarFotoAvatar(BACKEND_URL + u.foto_url);
   } else {
     document.getElementById('sidebar-avatar').textContent = iniciais;
   }
@@ -626,7 +630,7 @@ async function abrirCIDoBackend(id, modoAdmin = false) {
     const nomeDeptoRemetente = deptoRemetente
       ? (NOMES_DEPT[deptoRemetente.nome.toUpperCase()] || deptoRemetente.nome)
       : `Depto. ${ci.departamento_id}`;
-    const fotoUrl = ci.usuario_foto ? `http://localhost:3000${ci.usuario_foto}` : null;
+    const fotoUrl = ci.usuario_foto ? `${BACKEND_URL}${ci.usuario_foto}` : null;
     const nomeRem = ci.usuario_nome || `Usuário ${ci.usuario_id}`;
     const iniciaisRem = nomeRem.split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
     document.getElementById('modal-from').innerHTML = `
@@ -678,7 +682,7 @@ async function abrirCIDoBackend(id, modoAdmin = false) {
         anexos.forEach(a => {
           const tamanhoKB = a.tamanho ? (parseInt(a.tamanho) / 1024).toFixed(1) + ' KB' : '';
           lista.innerHTML += `
-            <div onclick="baixarAnexo('http://localhost:3000${a.caminho}','${a.nome.replace(/'/g,"\\'")}')"
+            <div onclick="baixarAnexo('${BACKEND_URL}${a.caminho}','${a.nome.replace(/'/g,"\\'")}')"
                style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--usga-xpale);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;color:var(--text-primary)">
               <i class="ti ti-paperclip" style="color:var(--usga-mid);font-size:16px"></i>
               <span style="flex:1;font-size:13px;font-weight:500">${a.nome}</span>
@@ -1157,7 +1161,7 @@ function showPage(name) {
     const NOMES_CARGO = { 1: 'Administrador Geral', 2: 'Gerente Administrativo', 3: 'Supervisor', 4: 'Funcionário', 5: 'Secretário' };
     const configAvatar = document.getElementById('config-avatar');
     if (u.foto_url) {
-      aplicarFotoAvatar('http://localhost:3000' + u.foto_url);
+      aplicarFotoAvatar(BACKEND_URL + u.foto_url);
     } else {
       configAvatar.style.backgroundImage = '';
       configAvatar.textContent = iniciais || '--';
@@ -1773,7 +1777,7 @@ function renderizarUsuariosCA(usuarios) {
         return `<tr>
           <td>
             <div style="display:flex;align-items:center;gap:12px">
-              <div style="width:36px;height:36px;border-radius:50%;background:var(--usga-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;${u.foto_url ? `background-image:url(http://localhost:3000${u.foto_url});background-size:cover;background-position:center` : ''}">${u.foto_url ? '' : iniciais}</div>
+              <div style="width:36px;height:36px;border-radius:50%;background:var(--usga-mid);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;${u.foto_url ? `background-image:url(${BACKEND_URL}${u.foto_url});background-size:cover;background-position:center` : ''}">${u.foto_url ? '' : iniciais}</div>
               <div>
                 <div style="display:flex;align-items:center;gap:6px">
                   <span id="ca-nome-label-${u.id}" style="font-weight:500;font-size:13.5px;color:var(--text-primary)">${u.nome}</span>

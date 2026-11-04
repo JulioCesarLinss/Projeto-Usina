@@ -35,3 +35,6 @@ backend/uploads/
 
 # Fotos das usinas (imagens locais, não versionar)
 frontend/fotos_usinas/
+# Backups e dumps do banco (contêm dados e senhas dos usuários)
+backup_*.sql
+/*.sql
