@@ -180,9 +180,10 @@ export const listarCIsArquivadas = async (req, res, next) => {
     const { id: usuario_id, departamento_id } = req.usuario;
     const pagina = parseInt(req.query.pagina) || 1;
     const limite = parseInt(req.query.limite) || 20;
+    const somenteProprias = req.usuario.cargo_id === 1; // admin: só as que enviou ou recebeu
     const [cis, total] = await Promise.all([
-      comunicacaoModel.listarCIsArquivadas(usuario_id, departamento_id, pagina, limite),
-      comunicacaoModel.contarCIsArquivadas(usuario_id, departamento_id)
+      comunicacaoModel.listarCIsArquivadas(usuario_id, departamento_id, pagina, limite, somenteProprias),
+      comunicacaoModel.contarCIsArquivadas(usuario_id, departamento_id, somenteProprias)
     ]);
     res.status(200).json({ sucesso: true, dados: cis, paginacao: { pagina, limite, total } });
   } catch (err) { next(err); }
@@ -240,13 +241,16 @@ export const arquivarComunicacao = async (req, res, next) =>{
 export const buscarCIsComFiltros = async (req, res, next) => {
     try {
         const { busca, estado, data_inicio, data_fim, tipo, pagina, limite } = req.query;
-        const verTodos = req.usuario.cargo_id <= 2;
+        // administrador só busca nas C.I.s que ele enviou ou recebeu
+        const ehAdmin = req.usuario.cargo_id === 1;
+        const verTodos = !ehAdmin && req.usuario.cargo_id <= 2;
 
         const resultado = await comunicacaoModel.buscarCIs({
             tipo: tipo || 'recebidas',
             departamento_id: req.usuario.departamento_id,
             usuario_id: req.usuario.id,
             verTodos,
+            somenteProprias: ehAdmin,
             usina_id: req.usuario.usina_id,
             busca,
             estado,
@@ -350,8 +354,10 @@ export const listarMinhasCIs = async (req, res, next) => {
     const pagina = parseInt(req.query.pagina) || 1;
     const limite = parseInt(req.query.limite) || 10;
     const usuario_id = req.usuario.id;
-    const departamento_id = req.usuario.departamento_id;
-    const filtro_departamento_id = req.query.departamento_filtro ? parseInt(req.query.departamento_filtro) : null;
+    // administrador não vê as C.I.s do setor: só as que enviou ou leu
+    const ehAdmin = req.usuario.cargo_id === 1;
+    const departamento_id = ehAdmin ? null : req.usuario.departamento_id;
+    const filtro_departamento_id = (!ehAdmin && req.query.departamento_filtro) ? parseInt(req.query.departamento_filtro) : null;
     const [comunicacoes, total] = await Promise.all([
       comunicacaoModel.listarMinhasCIs(usuario_id, departamento_id, pagina, limite, filtro_departamento_id),
       comunicacaoModel.contarMinhasCIs(usuario_id, departamento_id, filtro_departamento_id)

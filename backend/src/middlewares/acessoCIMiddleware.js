@@ -3,19 +3,20 @@ import * as destinatarioModel from '../models/destinatarioModel.js';
 import { AuthorizationError, NotFoundError } from '../utils/appError.js';
 
 // Regra de acesso ao CONTEÚDO de uma C.I.
-// - Administrador (cargo 1) NUNCA lê conteúdo; só vê histórico/metadados.
 // - Autor sempre acessa.
-// - Rascunho: somente o autor.
+// - Rascunho e fases de aprovação: só o autor e o gerente em cujo nome sai a C.I.
 // - Destinatário acessa.
+// - Administrador (cargo 1) só lê as C.I.s que ELE enviou ou recebeu; as demais,
+//   só pelo histórico (metadados).
 // - Gerente/supervisor (cargo 2 ou 3) acessa se for do departamento da C.I.
 //   ou de um departamento destinatário.
 export const podeAcessarConteudoCI = (usuario, ci, destinatarios) => {
-  if (usuario.cargo_id === 1) return false;
   if (ci.usuario_id === usuario.id) return true;
   // fases privadas: rascunho e aprovação — só autor e o gerente em cujo nome sai a C.I.
   if (['rascunho', 'aguardando_aprovacao', 'ajustes_solicitados'].includes(ci.estado))
     return ci.em_nome_de_id === usuario.id;
   if (destinatarios.some(d => d.usuario_id === usuario.id)) return true;
+  if (usuario.cargo_id === 1) return false;
   if (usuario.cargo_id <= 3) {
     if (usuario.departamento_id === ci.departamento_id) return true;
     if (destinatarios.some(d => d.departamento_id === usuario.departamento_id)) return true;

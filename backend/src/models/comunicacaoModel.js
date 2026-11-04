@@ -122,7 +122,12 @@ export const arquivarCI = async (id) => {
   return result;
 };
 
-export const listarCIsArquivadas = async (usuario_id, departamento_id, pagina = 1, limite = 20) => {
+// somenteProprias (admin): só as C.I.s que o usuário enviou ou recebeu
+const condArquivadas = (somenteProprias) => somenteProprias
+  ? '(c.usuario_id = ? OR EXISTS (SELECT 1 FROM destinatario d2 WHERE d2.comunicacao_id = c.id AND d2.usuario_id = ?))'
+  : '(c.usuario_id = ? OR c.departamento_id = ?)';
+
+export const listarCIsArquivadas = async (usuario_id, departamento_id, pagina = 1, limite = 20, somenteProprias = false) => {
   const offset = (pagina - 1) * limite;
   const sql = `
     SELECT c.*, u.nome AS usuario_nome,
@@ -131,17 +136,17 @@ export const listarCIsArquivadas = async (usuario_id, departamento_id, pagina = 
     FROM comunicacao c
     INNER JOIN usuario u ON u.id = c.usuario_id
     WHERE c.estado = 'arquivada'
-      AND (c.usuario_id = ? OR c.departamento_id = ?)
+      AND ${condArquivadas(somenteProprias)}
     ORDER BY c.data_hora DESC
     LIMIT ? OFFSET ?`;
-  const [results] = await pool.query(sql, [usuario_id, departamento_id, limite, offset]);
+  const [results] = await pool.query(sql, [usuario_id, somenteProprias ? usuario_id : departamento_id, limite, offset]);
   return results;
 };
 
-export const contarCIsArquivadas = async (usuario_id, departamento_id) => {
+export const contarCIsArquivadas = async (usuario_id, departamento_id, somenteProprias = false) => {
   const sql = `SELECT COUNT(*) AS total FROM comunicacao c
-    WHERE c.estado = 'arquivada' AND (c.usuario_id = ? OR c.departamento_id = ?)`;
-  const [[row]] = await pool.query(sql, [usuario_id, departamento_id]);
+    WHERE c.estado = 'arquivada' AND ${condArquivadas(somenteProprias)}`;
+  const [[row]] = await pool.query(sql, [usuario_id, somenteProprias ? usuario_id : departamento_id]);
   return row.total;
 };
 
@@ -210,7 +215,8 @@ export const buscarCIs = async ({
   data_fim,
   pagina = 1,
   limite = 20,
-  usina_id = null
+  usina_id = null,
+  somenteProprias = false
 }) => {
   const offset = (pagina - 1) * limite;
   const conditions = [];
@@ -227,6 +233,10 @@ export const buscarCIs = async ({
   if (tipo === 'enviadas') {
     conditions.push('usuario_id = ?');
     params.push(usuario_id);
+  } else if (somenteProprias) {
+    // administrador: só as C.I.s que enviou ou recebeu
+    conditions.push('(usuario_id = ? OR id IN (SELECT comunicacao_id FROM destinatario WHERE usuario_id = ?))');
+    params.push(usuario_id, usuario_id);
   } else if (!verTodos) {
     conditions.push('departamento_id = ?');
     params.push(departamento_id);
