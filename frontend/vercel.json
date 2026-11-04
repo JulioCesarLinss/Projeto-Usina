@@ -1,0 +1,5 @@
+{
+  "redirects": [
+    { "source": "/ci-digital-usina.html", "destination": "/", "permanent": true }
+  ]
+}
