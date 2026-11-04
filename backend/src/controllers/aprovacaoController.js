@@ -42,7 +42,7 @@ export const aprovar = async (req, res, next) => {
       throw new ConflictError('Esta C.I. já foi decidida', 'CI_NAO_AGUARDA_APROVACAO');
 
     await comentarioModel.criarComentario(ci.id, req.usuario.id, 'aprovacao', texto || 'Aprovada');
-    await aprovacaoService.notificarDestinatarios(ci.id, ci.titulo);
+    await aprovacaoService.notificarDestinatarios(ci.id, ci.titulo, ci.prioridade);
     await notificacaoModel.criarNotificacao(`Sua C.I. foi aprovada e enviada: ${ci.titulo}`, ci.usuario_id, ci.id);
     await registrarLog(req.usuario.id, 'Aprovação de C.I', getClientIP(req), ci.id);
     await registrarLog(ci.usuario_id, 'Envio de C.I', getClientIP(req), ci.id);

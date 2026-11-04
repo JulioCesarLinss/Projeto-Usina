@@ -1,5 +1,11 @@
 node_modules
 .env
-database/cigital.sql
-*.sql
 uploads/
+
+# Dumps e backups do banco (contêm dados e senhas dos usuários) não vão para o Git
+*.sql
+database/cigital.sql
+# ...exceto a estrutura e as migrações, que o servidor aplica sozinho
+!database/schema.sql
+!database/dados.sql
+!database/migracao_*.sql

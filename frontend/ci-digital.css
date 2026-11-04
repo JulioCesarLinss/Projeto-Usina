@@ -547,6 +547,25 @@ body {
 .priority-dot.medium { background: var(--warning); }
 .priority-dot.low    { background: var(--usga-light); }
 
+/* selo de prioridade (Urgente / Importante) e prazo de leitura */
+.prio-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  margin-right: 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  vertical-align: middle;
+}
+.prio-badge.urgente    { background: #FCEAE8; color: #A3241A; }
+.prio-badge.importante { background: #FEF3DC; color: #8A6010; }
+.prazo-leitura         { white-space: nowrap; }
+.prazo-leitura.vencido { color: var(--danger); font-weight: 600; }
+body.dark .prio-badge.urgente    { background: rgba(239,68,68,0.15);  color: #EF4444; }
+body.dark .prio-badge.importante { background: rgba(245,158,11,0.15); color: #F59E0B; }
+
 .ci-date { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
 .attach-icon { color: var(--text-faint); font-size: 15px; vertical-align: middle; }
 

@@ -17,6 +17,7 @@ router.post('/:id/aprovar', verificarToken, aprovacaoController.aprovar);
 router.post('/:id/solicitar-ajustes', verificarToken, aprovacaoController.solicitarAjustes);
 router.get('/:id/comentarios', verificarToken, verificarAcessoCI, aprovacaoController.listarComentarios);
 router.post('/:id/comentarios', verificarToken, verificarAcessoCI, aprovacaoController.comentar);
+router.post('/:id/lembrar', verificarToken, comunicacaoController.lembrarPendentes);
 router.get('/minhas', verificarToken, comunicacaoController.listarMinhasCIs);
 router.get('/rascunhos', verificarToken, comunicacaoController.listarRascunhos);
 router.put('/:id', verificarToken, comunicacaoController.atualizarCI);

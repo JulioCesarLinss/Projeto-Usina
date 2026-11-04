@@ -47,6 +47,9 @@ CREATE TABLE comunicacao(
   aprovado_por INT NULL,
   aprovado_em DATETIME NULL,
   assinatura_aprovacao VARCHAR(140) NULL,
+  prioridade ENUM('normal','importante','urgente') NOT NULL DEFAULT 'normal',
+  prazo_leitura DATE NULL,           -- "ler até" (opcional)
+  lembrete_enviado_em DATETIME NULL, -- lembrete automático do prazo já disparado
   FOREIGN KEY (usuario_id) REFERENCES usuario(id),
   FOREIGN KEY (departamento_id) REFERENCES departamento(id),
   FOREIGN KEY (em_nome_de_id) REFERENCES usuario(id),
@@ -118,6 +121,7 @@ CREATE TABLE recuperacao_senha (
 CREATE INDEX idx_comunicacao_data ON comunicacao (data_hora, id);
 CREATE INDEX idx_comunicacao_dept_data ON comunicacao (departamento_id, data_hora);
 CREATE INDEX idx_comunicacao_usuario_data ON comunicacao (usuario_id, data_hora);
+CREATE INDEX idx_comunicacao_prazo ON comunicacao (estado, prazo_leitura);
 CREATE INDEX idx_destinatario_ci_usuario ON destinatario (comunicacao_id, usuario_id);
 CREATE INDEX idx_confirmacao_ci_usuario ON confirmacao_leitura (comunicacao_id, usuario_id);
 

@@ -491,6 +491,48 @@ function statusLeituraEnvio(ci) {
   return `<span class="status-badge partial">${lidas}/${total} leram</span>`;
 }
 
+// ── prioridade e prazo de leitura ──
+const PRIO_DOT = { urgente: 'high', importante: 'medium', normal: 'low' };
+const PRIO_NOME = { urgente: 'Urgente', importante: 'Importante' };
+
+function prioBadge(prioridade) {
+  return PRIO_NOME[prioridade] ? `<span class="prio-badge ${prioridade}">${PRIO_NOME[prioridade]}</span>` : '';
+}
+
+// a data pode vir como 'AAAA-MM-DD' ou ISO completo; usa só a parte da data (sem fuso)
+function prazoISO(prazo) { return prazo ? String(prazo).slice(0, 10) : null; }
+
+function hojeISOLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function prazoTexto(prazo, lida) {
+  const p = prazoISO(prazo);
+  if (!p) return '';
+  const [a, m, d] = p.split('-');
+  const vencido = !lida && p <= hojeISOLocal();
+  return `<span class="prazo-leitura${vencido ? ' vencido' : ''}">ler até ${d}/${m}${a !== String(new Date().getFullYear()) ? '/' + a : ''}</span>`;
+}
+
+// urgente: supervisor ou acima, ou secretário enviando em nome de um gerente
+function podeMarcarUrgente() {
+  const cargo = state.usuario?.cargo_id;
+  if (cargo && cargo <= 3) return true;
+  return cargo === 5 && !!document.getElementById('ci-gerente').value;
+}
+
+function atualizarOpcaoUrgente() {
+  const opc = document.getElementById('ci-opcao-urgente');
+  const sel = document.getElementById('ci-prioridade');
+  if (!opc || !sel) return;
+  const pode = podeMarcarUrgente();
+  opc.disabled = !pode;
+  opc.textContent = pode ? 'Urgente' : 'Urgente (supervisor ou acima)';
+  if (!pode && sel.value === 'urgente') sel.value = 'importante';
+  document.getElementById('ci-prazo').min = hojeISOLocal();
+}
+
 function renderizarLinhaCI(ci) {
   const data = ci.data_hora ? new Date(ci.data_hora).toLocaleDateString('pt-BR') : '—';
 
@@ -519,10 +561,16 @@ function renderizarLinhaCI(ci) {
   const depto = state.departamentos.find(d => d.id === ci.departamento_id);
   const nomeDepto = depto ? (NOMES_DEPT[depto.nome.toUpperCase()] || depto.nome) : `Depto. ${ci.departamento_id}`;
 
+  const prio = ci.prioridade || 'normal';
+  const ehMinha = ci.usuario_id === state.usuario?.id;
+  // para quem recebeu, o prazo vence se não leu; para quem enviou, se nem todos leram
+  const lidaParaPrazo = ehMinha ? (ci.total_destinatarios > 0 && ci.total_lidas >= ci.total_destinatarios) : !!ci.lida;
+  const prazo = ci.estado === 'enviada' ? prazoTexto(ci.prazo_leitura, lidaParaPrazo) : '';
+
   return `<tr onclick="abrirCIDoBackend(${ci.id})" style="cursor:pointer">
-    <td><span class="priority-dot medium"></span></td>
+    <td><span class="priority-dot ${PRIO_DOT[prio] || 'low'}" title="Prioridade: ${PRIO_NOME[prio] || 'Normal'}"></span></td>
     <td><span class="ci-num">CI-${String(ci.id).padStart(4,'0')}</span></td>
-    <td class="ci-subject">${ci.titulo}<small>${ci.usuario_id === state.usuario?.id ? 'enviada' : 'recebida'} · ${data}</small></td>
+    <td class="ci-subject">${prioBadge(prio)}${escHtml(ci.titulo)}<small>${ehMinha ? 'enviada' : 'recebida'} · ${data}${prazo ? ' · ' + prazo : ''}</small></td>
     <td><span class="dept-tag"><i class="ti ti-building" style="font-size:11px"></i> ${nomeDepto}</span></td>
     <td>${statusLabel}</td>
     <td class="ci-date">${data}</td>
@@ -647,9 +695,11 @@ async function abrirCIDoBackend(id, modoAdmin = false) {
       </div>`;
 
     // busca destinatários para exibir nomes reais
+    let destsCI = [];
     try {
       const destData = await api('GET', '/comunicacoes/' + id + '/destinatarios');
       const dests = destData.dados || [];
+      destsCI = dests;
       const toEl = document.getElementById('modal-to');
 
       if (destData.para_todos) {
@@ -669,6 +719,11 @@ async function abrirCIDoBackend(id, modoAdmin = false) {
     }
     document.getElementById('modal-date').textContent = dataFmt;
     document.getElementById('modal-subject').textContent = ci.titulo;
+    const prioEl = document.getElementById('modal-prio');
+    const prioHtml = prioBadge(ci.prioridade) + (ci.prazo_leitura
+      ? `<span style="font-size:12px;color:var(--text-muted)"><i class="ti ti-calendar-due"></i> Ler até ${formatarDataBR(prazoISO(ci.prazo_leitura))}</span>` : '');
+    prioEl.innerHTML = prioHtml;
+    prioEl.style.display = prioHtml ? 'flex' : 'none';
     document.getElementById('modal-body-text').innerHTML = linkificar(ci.descricao);
     const podeArquivar = state.usuario?.cargo_id <= 2;
     document.getElementById('btn-arquivar').style.display = (podeArquivar && ci.estado !== 'arquivada') ? '' : 'none';
@@ -702,8 +757,51 @@ async function abrirCIDoBackend(id, modoAdmin = false) {
     btnLer.disabled = false;
     btnLer.innerHTML = '<i class="ti ti-check"></i> Confirmar Leitura';
     await renderizarAprovacao(ci, modoAdmin);
+    await renderizarLeituras(ci, destsCI, modoAdmin);
   } catch (err) {
     document.getElementById('modal-body-text').textContent = 'Erro ao carregar: ' + err.message;
+  }
+}
+
+// quem enviou (ou o gerente em cujo nome foi enviada) vê quantos leram e pode lembrar os pendentes
+async function renderizarLeituras(ci, dests, modoAdmin) {
+  const box = document.getElementById('modal-leituras');
+  const btn = document.getElementById('btn-lembrar');
+  box.style.display = 'none';
+  btn.style.display = 'none';
+  const meuId = state.usuario?.id;
+  if (modoAdmin || ci.estado !== 'enviada' || (ci.usuario_id !== meuId && ci.em_nome_de_id !== meuId)) return;
+  if (!dests || dests.length === 0) return;
+  try {
+    const { dados } = await api('GET', '/comunicacoes/' + ci.id + '/confirmacoes');
+    const idsDest = new Set(dests.map(d => d.usuario_id));
+    const lidas = new Set((dados || []).map(c => c.usuario_id).filter(u => idsDest.has(u))).size;
+    const pendentes = dests.length - lidas;
+    document.getElementById('modal-leituras-texto').innerHTML = pendentes > 0
+      ? `<strong>${lidas} de ${dests.length}</strong> confirmaram a leitura · ${pendentes} pendente(s)`
+      : `<strong>Todos os ${dests.length}</strong> destinatários confirmaram a leitura`;
+    box.style.display = 'flex';
+    if (pendentes > 0) {
+      btn.style.display = '';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-bell-ringing"></i> Lembrar pendentes';
+    }
+  } catch (e) { /* sem contagem: a C.I. continua legível */ }
+}
+
+async function lembrarPendentesCI() {
+  const ci = state.ciAtual; if (!ci) return;
+  const btn = document.getElementById('btn-lembrar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Enviando...';
+  try {
+    const data = await api('POST', '/comunicacoes/' + ci.id + '/lembrar');
+    toast(data.mensagem || 'Lembrete enviado.');
+    btn.innerHTML = '<i class="ti ti-check"></i> Lembrete enviado';
+  } catch (err) {
+    toast(err.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-bell-ringing"></i> Lembrar pendentes';
   }
 }
 
@@ -810,7 +908,7 @@ async function carregarAprovacoes() {
     lista.innerHTML = linhas.map(({ c, rotulo }) => `
       <div onclick="abrirCIDoBackend(${c.id})" style="display:flex;gap:10px;align-items:center;padding:10px 14px;background:var(--usga-xpale);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer">
         <span class="ci-num">CI-${String(c.id).padStart(4, '0')}</span>
-        <span style="flex:1;font-weight:500">${escHtml(c.titulo)}</span>
+        <span style="flex:1;font-weight:500">${prioBadge(c.prioridade)}${escHtml(c.titulo)}</span>
         <span style="font-size:12px;color:var(--text-muted)">${rotulo}</span>
       </div>`).join('');
   } catch (e) { card.style.display = 'none'; }
@@ -821,7 +919,8 @@ async function editarCIComAjustes() {
   const ci = state.ciAtual; if (!ci) return;
   closeModal();
   showPage('nova');
-  editarRascunho(ci.id, encodeURIComponent(ci.titulo), encodeURIComponent(ci.descricao), ci.departamento_id, ci.em_nome_de_id);
+  editarRascunho(ci.id, encodeURIComponent(ci.titulo), encodeURIComponent(ci.descricao), ci.departamento_id, ci.em_nome_de_id,
+    ci.prioridade, ci.prazo_leitura);
 }
 
 async function carregarGerentes() {
@@ -990,7 +1089,7 @@ async function carregarRascunhos() {
           <div style="font-weight:600;font-size:13px">${r.titulo || '(sem título)'}</div>
           <div style="font-size:11px;color:var(--text-muted)">${data}</div>
         </div>
-        <button class="btn-ghost" style="font-size:12px" onclick="editarRascunho(${r.id}, '${encodeURIComponent(r.titulo || '')}', '${encodeURIComponent(r.descricao || '')}', ${r.departamento_id})">
+        <button class="btn-ghost" style="font-size:12px" onclick="editarRascunho(${r.id}, '${encodeURIComponent(r.titulo || '')}', '${encodeURIComponent(r.descricao || '')}', ${r.departamento_id}, ${r.em_nome_de_id || 'null'}, '${r.prioridade || 'normal'}', '${prazoISO(r.prazo_leitura) || ''}')">
           <i class="ti ti-edit"></i> Continuar
         </button>
         <button id="rasc-del-btn-${r.id}" class="btn-ghost" style="font-size:12px;color:var(--danger)" onclick="confirmarDelRascunho(${r.id})" title="Excluir rascunho">
@@ -1031,12 +1130,15 @@ async function deletarRascunho(id) {
   }
 }
 
-function editarRascunho(id, titulo, descricao, departamento_id, gerente_id = null) {
+function editarRascunho(id, titulo, descricao, departamento_id, gerente_id = null, prioridade = 'normal', prazo = null) {
   state.rascunhoAtual = id;
   document.getElementById('ci-titulo').value = decodeURIComponent(titulo);
   document.getElementById('ci-descricao').value = decodeURIComponent(descricao);
   document.getElementById('ci-departamento').value = departamento_id;
   document.getElementById('ci-gerente').value = gerente_id || '';
+  document.getElementById('ci-prioridade').value = prioridade || 'normal';
+  document.getElementById('ci-prazo').value = prazoISO(prazo) || '';
+  atualizarOpcaoUrgente();
   onDepartamentoChange();
   document.getElementById('btn-cancelar-rascunho').style.display = '';
   document.getElementById('btn-enviar-ci').innerHTML = '<i class="ti ti-send"></i> Enviar Rascunho';
@@ -1068,6 +1170,9 @@ async function enviarCI(estado) {
   }
 
   const em_nome_de_id = parseInt(document.getElementById('ci-gerente').value) || null;
+  const prioridade = document.getElementById('ci-prioridade').value || 'normal';
+  const prazo_leitura = document.getElementById('ci-prazo').value || null;
+  if (prazo_leitura && prazo_leitura < hojeISOLocal()) { toast('O prazo de leitura não pode ser anterior a hoje.', 'error'); return; }
 
   const btn = document.getElementById('btn-enviar-ci');
   const btnRasc = document.getElementById('btn-salvar-rascunho');
@@ -1077,9 +1182,9 @@ async function enviarCI(estado) {
   try {
     let data;
     if (state.rascunhoAtual) {
-      data = await api('PUT', '/comunicacoes/' + state.rascunhoAtual, { titulo, descricao, departamento_id, estado, destinatarios, em_nome_de_id });
+      data = await api('PUT', '/comunicacoes/' + state.rascunhoAtual, { titulo, descricao, departamento_id, estado, destinatarios, em_nome_de_id, prioridade, prazo_leitura });
     } else {
-      data = await api('POST', '/comunicacoes/criar', { titulo, descricao, departamento_id, estado, destinatarios, em_nome_de_id });
+      data = await api('POST', '/comunicacoes/criar', { titulo, descricao, departamento_id, estado, destinatarios, em_nome_de_id, prioridade, prazo_leitura });
     }
     const ciId = data.dados?.id || state.rascunhoAtual;
     const arquivo = document.getElementById('ci-arquivo').files[0];
@@ -1116,6 +1221,9 @@ function limparFormularioCI() {
   document.getElementById('ci-descricao').value = '';
   document.getElementById('ci-departamento').value = '';
   document.getElementById('ci-gerente').value = '';
+  document.getElementById('ci-prioridade').value = 'normal';
+  document.getElementById('ci-prazo').value = '';
+  atualizarOpcaoUrgente();
   document.getElementById('ci-arquivo').value = '';
   document.getElementById('upload-label').textContent = 'PDF, DOCX, XLSX, PNG — máx. 20 MB por arquivo';
   document.getElementById('ci-destinatarios-wrap').style.display = 'none';
@@ -1519,6 +1627,7 @@ function aplicarPermissoesFrontend(usuario) {
   });
   // telas que listam conteúdo de C.I. não se aplicam ao administrador
   if (cargo === 1) document.querySelectorAll('.sem-admin').forEach(el => { el.style.display = 'none'; });
+  atualizarOpcaoUrgente();
 }
 
 function validarAcessoPagina(pagina, usuario) {

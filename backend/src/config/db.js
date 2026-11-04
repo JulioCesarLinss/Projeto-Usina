@@ -14,10 +14,30 @@ requiredEnvVars.forEach((envVar) => {
 
 
 const connectionLimit = parseInt(process.env.DB_CONNECTION_LIMIT) || 10;
+const port = parseInt(process.env.DB_PORT) || 3306;
 
+// cria o banco se ainda não existir (instalação nova: só precisa do .env).
+// As tabelas são criadas depois pelas migrações automáticas (src/config/migracoes.js).
+if (!/^[A-Za-z0-9_]+$/.test(process.env.DB_NAME)) {
+  console.error(' ERRO: DB_NAME deve conter apenas letras, números e _');
+  process.exit(1);
+}
+try {
+  const conn = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    port,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD || ''
+  });
+  await conn.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\``);
+  await conn.end();
+} catch (err) {
+  // sem permissão para criar bancos, segue: o teste de conexão abaixo mostra o erro real
+}
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
+  port,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME,

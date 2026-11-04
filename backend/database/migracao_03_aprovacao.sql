@@ -1,3 +1,4 @@
+-- ja_aplicada_se: SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'comentario_comunicacao'
 -- Fluxo de aprovação do gerente + comentários + versões. Rode em bancos já existentes.
 USE cidigital;
 

@@ -5,12 +5,14 @@ import * as anexoModel from '../models/anexoModel.js';
 import * as usuarioModel from '../models/usuarioModel.js';
 import * as comentarioModel from '../models/comentarioModel.js';
 import * as aprovacaoService from '../services/aprovacaoService.js';
-import { ValidationError, NotFoundError, DatabaseError, AuthorizationError } from '../utils/appError.js';
+import { validarPrioridadePrazo } from '../services/prioridadeService.js';
+import * as lembreteService from '../services/lembreteService.js';
+import { AppError, ValidationError, NotFoundError, DatabaseError, AuthorizationError } from '../utils/appError.js';
 import { registrarLog, getClientIP } from '../middlewares/auditMiddleware.js';
 
 export const criarCI = async (req, res, next) => {
   try {
-    const { titulo, estado, descricao, departamento_id, destinatarios, em_nome_de_id } = req.body;
+    const { titulo, estado, descricao, departamento_id, destinatarios, em_nome_de_id, prioridade, prazo_leitura } = req.body;
     const usuario_id = req.usuario.id;
     const data_hora = new Date();
 
@@ -26,17 +28,19 @@ export const criarCI = async (req, res, next) => {
     // enviar "em nome de" um gerente exige a aprovação dele antes de qualquer envio
     const gerente = em_nome_de_id ? await aprovacaoService.validarGerente(em_nome_de_id, req.usuario) : null;
     const estadoFinal = (estadoPedido === 'enviada' && gerente) ? 'aguardando_aprovacao' : estadoPedido;
+    const prio = validarPrioridadePrazo({ prioridade, prazo_leitura }, req.usuario, Boolean(gerente));
 
     let resultado;
     try {
-      resultado = await comunicacaoModel.criarComunicacao(titulo, data_hora, estadoFinal, descricao, usuario_id, departamento_id, gerente ? gerente.id : null);
+      resultado = await comunicacaoModel.criarComunicacao(titulo, data_hora, estadoFinal, descricao, usuario_id, departamento_id,
+        gerente ? gerente.id : null, prio.prioridade, prio.prazo_leitura);
     } catch (err) {
       throw new DatabaseError('Erro ao criar comunicação', 'ERRO_CRIAR_COMUNICACAO');
     }
 
     if (estadoFinal === 'enviada') {
       await aprovacaoService.salvarDestinatarios(resultado.insertId, destinatarios, departamento_id, usuario_id);
-      await aprovacaoService.notificarDestinatarios(resultado.insertId, titulo);
+      await aprovacaoService.notificarDestinatarios(resultado.insertId, titulo, prio.prioridade);
       await registrarLog(usuario_id, 'Envio de C.I', getClientIP(req), resultado.insertId);
     } else if (estadoFinal === 'aguardando_aprovacao') {
       await aprovacaoService.salvarDestinatarios(resultado.insertId, destinatarios, departamento_id, usuario_id);
@@ -290,7 +294,7 @@ export const deletarRascunho = async (req, res, next) => {
 export const atualizarCI = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { titulo, descricao, departamento_id, estado, destinatarios, em_nome_de_id } = req.body;
+    const { titulo, descricao, departamento_id, estado, destinatarios, em_nome_de_id, prioridade, prazo_leitura } = req.body;
 
     if (!id || isNaN(id)) throw new ValidationError('ID inválido', 'ID_INVALIDO', []);
     if (!titulo || !descricao || !departamento_id) throw new ValidationError('Campos obrigatórios', 'CAMPOS_OBRIGATORIOS', []);
@@ -309,6 +313,7 @@ export const atualizarCI = async (req, res, next) => {
     const idGerente = em_nome_de_id !== undefined ? em_nome_de_id : ci.em_nome_de_id;
     const gerente = idGerente ? await aprovacaoService.validarGerente(idGerente, req.usuario) : null;
     const veioDeAjuste = ci.estado === 'ajustes_solicitados';
+    const prio = validarPrioridadePrazo({ prioridade, prazo_leitura }, req.usuario, Boolean(gerente));
 
     // salvar sem enviar não faz uma C.I. em ajuste voltar a ser rascunho
     let estadoFinal = estadoPedido;
@@ -318,11 +323,12 @@ export const atualizarCI = async (req, res, next) => {
     // guarda o texto anterior para o gerente ver o que mudou
     if (veioDeAjuste) await comunicacaoModel.salvarVersaoAtual(id, req.usuario.id);
 
-    await comunicacaoModel.atualizarCI(id, titulo, descricao, departamento_id, estadoFinal, gerente ? gerente.id : null);
+    await comunicacaoModel.atualizarCI(id, titulo, descricao, departamento_id, estadoFinal, gerente ? gerente.id : null,
+      prio.prioridade, prio.prazo_leitura);
 
     if (estadoFinal === 'enviada') {
       await aprovacaoService.salvarDestinatarios(parseInt(id), destinatarios, departamento_id, req.usuario.id);
-      await aprovacaoService.notificarDestinatarios(parseInt(id), titulo);
+      await aprovacaoService.notificarDestinatarios(parseInt(id), titulo, prio.prioridade);
       await registrarLog(req.usuario.id, 'Envio de C.I', getClientIP(req), parseInt(id));
     } else if (estadoFinal === 'aguardando_aprovacao') {
       await aprovacaoService.salvarDestinatarios(parseInt(id), destinatarios, departamento_id, req.usuario.id);
@@ -375,6 +381,35 @@ export const listarDestinatariosCI = async (req, res, next) => {
     }
 
     res.status(200).json({ sucesso: true, dados: destinatarios, para_todos });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /:id/lembrar — o autor (ou o gerente em cujo nome foi enviada) lembra quem ainda não leu.
+// No máximo um lembrete manual por hora para cada C.I.
+export const lembrarPendentes = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!id || isNaN(id)) throw new ValidationError('ID inválido', 'ID_INVALIDO', []);
+
+    const ci = await comunicacaoModel.buscarCIporID(id);
+    if (!ci) throw new NotFoundError('Comunicação não encontrada', 'COMUNICACAO_NAO_ENCONTRADA');
+    if (ci.usuario_id !== req.usuario.id && ci.em_nome_de_id !== req.usuario.id)
+      throw new AuthorizationError('Apenas quem enviou a C.I. pode lembrar os pendentes', 'ACESSO_NEGADO');
+    if (ci.estado !== 'enviada')
+      throw new ValidationError('Só é possível lembrar pendentes de uma C.I. enviada', 'CI_NAO_ENVIADA', []);
+    if (await lembreteService.lembreteManualRecente(ci.id))
+      throw new AppError('Um lembrete já foi enviado na última hora. Tente novamente mais tarde.', 429, 'limite', 'LEMBRETE_RECENTE');
+
+    const lembrados = await lembreteService.lembrarPendentes(ci.id, `Lembrete: confirme a leitura da C.I. "${ci.titulo}"`);
+    if (lembrados > 0) await registrarLog(req.usuario.id, 'Lembrete de leitura', getClientIP(req), ci.id);
+
+    res.status(200).json({
+      sucesso: true,
+      mensagem: lembrados > 0 ? `${lembrados} pendente(s) lembrado(s)` : 'Todos já confirmaram a leitura',
+      dados: { lembrados }
+    });
   } catch (err) {
     next(err);
   }

@@ -21,6 +21,8 @@ import { securityHeaders } from './src/middlewares/securityHeadersMiddleware.js'
 import { rateLimiter } from './src/middlewares/rateLimitMiddleware.js';
 import { sanitizeInputs, validateContentType } from './src/middlewares/sanitizeMiddleware.js';
 import { auditMiddleware } from './src/middlewares/auditMiddleware.js';
+import { executarLembretesDePrazo } from './src/services/lembreteService.js';
+import { aplicarMigracoes } from './src/config/migracoes.js';
 
 dotenv.config();
 
@@ -133,7 +135,33 @@ app.use((req, res) => {
 app.use(handleError);
 
 // ==================== INICIA O SERVIDOR ====================
+// Antes de aceitar acessos, deixa o banco na versão que o código espera.
+// Se uma migração falhar, o servidor não liga (evita rodar com o banco pela metade).
+try {
+  await aplicarMigracoes();
+} catch (err) {
+  console.error('❌ Erro ao aplicar migrações do banco:', err.message);
+  process.exit(1);
+}
+
 app.listen(PORT, () => {
   console.log(`✅ Servidor rodando em http://localhost:${PORT}`);
   console.log(`📡 API disponível em http://localhost:${PORT}/api`);
+  iniciarLembretesDePrazo();
 });
+
+// ==================== LEMBRETE AUTOMÁTICO DE PRAZO ====================
+// Ao iniciar e depois a cada hora: avisa quem ainda não leu as C.I.s cujo prazo vence hoje.
+const UMA_HORA = 60 * 60 * 1000;
+function iniciarLembretesDePrazo() {
+  const rodar = async () => {
+    try {
+      const r = await executarLembretesDePrazo();
+      if (r.lembrados > 0) console.log(`🔔 Lembretes de prazo: ${r.lembrados} pendente(s) em ${r.cis} C.I.(s)`);
+    } catch (err) {
+      console.error('Erro nos lembretes de prazo:', err.message);
+    }
+  };
+  rodar();
+  setInterval(rodar, UMA_HORA);
+}

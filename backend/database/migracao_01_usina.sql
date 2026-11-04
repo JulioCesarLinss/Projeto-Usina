@@ -1,3 +1,4 @@
+-- ja_aplicada_se: SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usina'
 -- Migração para bancos JÁ existentes (instalações novas usam schema.sql + dados.sql).
 -- Tudo o que existe hoje é atribuído à Usina Trapiche (id 1).
 USE cidigital;

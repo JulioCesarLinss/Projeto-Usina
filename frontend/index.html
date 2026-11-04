@@ -341,7 +341,21 @@
         </div>
         <div class="form-group full secretario-only">
           <label>Enviar em nome de um gerente <span style="font-weight:400;color:var(--text-muted)">(opcional — exige a aprovação dele antes do envio)</span></label>
-          <select id="ci-gerente"><option value="">Enviar em meu próprio nome</option></select>
+          <select id="ci-gerente" onchange="atualizarOpcaoUrgente()"><option value="">Enviar em meu próprio nome</option></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Prioridade</label>
+            <select id="ci-prioridade">
+              <option value="normal">Normal</option>
+              <option value="importante">Importante</option>
+              <option value="urgente" id="ci-opcao-urgente">Urgente</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Ler até <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+            <input type="date" id="ci-prazo">
+          </div>
         </div>
         <div id="ci-destinatarios-wrap" style="display:none" class="form-group full">
           <label>Destinatários</label>
@@ -787,6 +801,7 @@
       <div class="modal-field" style="margin-bottom:12px">
         <label>Assunto</label>
         <p id="modal-subject" style="font-size:16px;font-weight:600;margin-top:4px"></p>
+        <div id="modal-prio" style="display:none;margin-top:6px;gap:8px;align-items:center;flex-wrap:wrap"></div>
       </div>
       <div class="ci-body-text" id="modal-body-text"></div>
       <div id="modal-anexos" style="display:none;margin-top:16px">
@@ -805,6 +820,11 @@
             <button class="btn btn-primary" id="btn-editar-ajustes" onclick="editarCIComAjustes()" style="display:none"><i class="ti ti-pencil"></i> Editar e reenviar</button>
           </div>
         </div>
+      </div>
+      <div id="modal-leituras" style="display:none;margin-top:16px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--usga-xpale);align-items:center;gap:10px;flex-wrap:wrap">
+        <i class="ti ti-users" style="color:var(--usga-mid)"></i>
+        <span id="modal-leituras-texto" style="flex:1;font-size:13px"></span>
+        <button class="btn-ghost" id="btn-lembrar" onclick="lembrarPendentesCI()" style="display:none"><i class="ti ti-bell-ringing"></i> Lembrar pendentes</button>
       </div>
       <div class="read-indicator" id="modal-read-indicator">
         <i class="ti ti-eye-check"></i>

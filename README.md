@@ -63,7 +63,20 @@ O sistema é composto por:
 
 ## Atualização — segurança, usinas, histórico e aprovação do gerente
 
-**Para bancos já existentes, rode em ordem:** `database/migracao_01_usina.sql`, `migracao_02_indices.sql` e `migracao_03_aprovacao.sql` (instalações novas usam apenas `schema.sql` + `dados.sql`).
+## 🗄️ Banco de dados: migrações automáticas
+
+Ninguém precisa rodar SQL à mão: **quando o backend liga, ele mesmo atualiza o banco.**
+
+- **Instalação nova:** com o MySQL rodando, copie `backend/.env.example` para `backend/.env` e preencha. Depois rode `npm install` e `npm run dev` dentro de `backend/`. O banco, as tabelas e os dados iniciais (usinas, cargos, departamentos) são criados sozinhos. Para criar o primeiro administrador, preencha `ADMIN_NOME`, `ADMIN_EMAIL` e `ADMIN_SENHA` no `.env`.
+- **Banco que já existe:** depois do `git pull`, basta ligar o backend. Ele roda as migrações que faltam (em `backend/database/migracao_XX_*.sql`) e registra cada uma na tabela `migracoes_aplicadas`.
+- **No Railway:** o deploy reinicia o servidor e as migrações rodam sozinhas. Veja o resultado no log do deploy.
+
+**Para mudar a estrutura do banco** (tabela ou coluna nova):
+1. Crie um arquivo **novo** `backend/database/migracao_XX_descricao.sql`, onde XX é o próximo número.
+2. Aplique a mesma mudança no `backend/database/schema.sql`, que é usado em instalações novas.
+3. **Nunca edite uma migração que já foi enviada:** ela não roda de novo. Para corrigir, crie outra.
+
+Se uma migração falhar, o servidor não liga e mostra o erro no terminal.
 
 - **Administrador não lê conteúdo.** Título, descrição, anexos e comentários de C.I. só são acessíveis ao autor, aos destinatários e a gerente/supervisor do setor envolvido. O admin consulta `GET /api/historico` (somente metadados, paginação por cursor, últimos 30 dias por padrão).
 - **Usuário inativo perde o acesso na hora** (o token é validado contra o banco a cada requisição).

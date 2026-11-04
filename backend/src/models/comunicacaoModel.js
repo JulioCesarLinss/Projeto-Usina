@@ -1,8 +1,8 @@
 import pool from '../config/db.js';
 
-export const criarComunicacao = async (titulo, data_hora, estado, descricao, usuario_id, departamento_id, em_nome_de_id = null) => {
-  const sql = 'INSERT INTO comunicacao (titulo, data_hora, estado, descricao, usuario_id, departamento_id, em_nome_de_id) VALUES (?, ?, ?, ?, ?, ?, ?)';
-  const [result] = await pool.query(sql, [titulo, data_hora, estado, descricao, usuario_id, departamento_id, em_nome_de_id]);
+export const criarComunicacao = async (titulo, data_hora, estado, descricao, usuario_id, departamento_id, em_nome_de_id = null, prioridade = 'normal', prazo_leitura = null) => {
+  const sql = 'INSERT INTO comunicacao (titulo, data_hora, estado, descricao, usuario_id, departamento_id, em_nome_de_id, prioridade, prazo_leitura) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  const [result] = await pool.query(sql, [titulo, data_hora, estado, descricao, usuario_id, departamento_id, em_nome_de_id, prioridade, prazo_leitura]);
   return result;
 };
 
@@ -10,6 +10,7 @@ export const buscarCIporID = async (id) => {
   const sql = `
     SELECT c.id, c.titulo, c.data_hora, c.estado, c.descricao, c.usuario_id, c.departamento_id,
            c.em_nome_de_id, c.aprovado_por, c.aprovado_em,
+           c.prioridade, DATE_FORMAT(c.prazo_leitura, '%Y-%m-%d') AS prazo_leitura,
            u.nome AS usuario_nome, u.foto_url AS usuario_foto,
            g.nome AS em_nome_de_nome
     FROM comunicacao c
@@ -40,13 +41,14 @@ export const listarCIRecebidas = async (departamento_id, usuario_id, pagina = 1,
   const deptParams = filtro_departamento_id ? [filtro_departamento_id] : [];
   const dateCond = apenasNaoLidas ? '' : 'AND DATE(c.data_hora) = CURDATE()';
   const naoLidaCond = apenasNaoLidas ? 'AND cl.id IS NULL' : '';
+  // urgentes ainda não lidas vêm primeiro; depois de lidas, voltam à ordem por data
   const sql = `SELECT c.*, CASE WHEN cl.id IS NOT NULL THEN 1 ELSE 0 END AS lida
     FROM comunicacao c
     INNER JOIN destinatario dest ON dest.comunicacao_id = c.id AND dest.usuario_id = ?
     LEFT JOIN confirmacao_leitura cl ON cl.comunicacao_id = c.id AND cl.usuario_id = ?
     WHERE c.usuario_id != ? AND c.estado = 'enviada'
     ${dateCond} ${deptCond} ${naoLidaCond}
-    ORDER BY c.data_hora DESC LIMIT ? OFFSET ?`;
+    ORDER BY (c.prioridade = 'urgente' AND cl.id IS NULL) DESC, c.data_hora DESC, c.id DESC LIMIT ? OFFSET ?`;
   const [results] = await pool.query(sql, [usuario_id, usuario_id, usuario_id, ...deptParams, limite, offset]);
   return results;
 };
@@ -107,9 +109,10 @@ export const deletarRascunho = async (id, usuario_id) => {
   }
 };
 
-export const atualizarCI = async (id, titulo, descricao, departamento_id, estado, em_nome_de_id = null) => {
-  const sql = 'UPDATE comunicacao SET titulo = ?, descricao = ?, departamento_id = ?, estado = ?, em_nome_de_id = ?, data_hora = NOW() WHERE id = ?';
-  const [result] = await pool.query(sql, [titulo, descricao, departamento_id, estado, em_nome_de_id, id]);
+export const atualizarCI = async (id, titulo, descricao, departamento_id, estado, em_nome_de_id = null, prioridade = 'normal', prazo_leitura = null) => {
+  const sql = `UPDATE comunicacao SET titulo = ?, descricao = ?, departamento_id = ?, estado = ?, em_nome_de_id = ?,
+    prioridade = ?, prazo_leitura = ?, lembrete_enviado_em = NULL, data_hora = NOW() WHERE id = ?`;
+  const [result] = await pool.query(sql, [titulo, descricao, departamento_id, estado, em_nome_de_id, prioridade, prazo_leitura, id]);
   return result;
 };
 
@@ -276,7 +279,7 @@ export const aprovarCI = async (id, gerente_id, assinatura) => {
 
 export const listarParaAprovar = async (gerente_id) => {
   const [rows] = await pool.query(
-    `SELECT c.id, c.titulo, c.data_hora, c.estado, c.departamento_id, u.nome AS usuario_nome
+    `SELECT c.id, c.titulo, c.data_hora, c.estado, c.departamento_id, c.prioridade, u.nome AS usuario_nome
      FROM comunicacao c INNER JOIN usuario u ON u.id = c.usuario_id
      WHERE c.em_nome_de_id = ? AND c.estado = 'aguardando_aprovacao'
      ORDER BY c.data_hora DESC LIMIT 100`, [gerente_id]);
@@ -285,7 +288,7 @@ export const listarParaAprovar = async (gerente_id) => {
 
 export const listarMinhasEmAprovacao = async (usuario_id) => {
   const [rows] = await pool.query(
-    `SELECT c.id, c.titulo, c.data_hora, c.estado, c.departamento_id, g.nome AS gerente_nome
+    `SELECT c.id, c.titulo, c.data_hora, c.estado, c.departamento_id, c.prioridade, g.nome AS gerente_nome
      FROM comunicacao c LEFT JOIN usuario g ON g.id = c.em_nome_de_id
      WHERE c.usuario_id = ? AND c.estado IN ('aguardando_aprovacao','ajustes_solicitados')
      ORDER BY c.data_hora DESC LIMIT 100`, [usuario_id]);

@@ -35,7 +35,8 @@ export const listarHistorico = async ({ cursor, limite, ...filtros }) => {
 
   const sql = `
     SELECT c.id, c.data_hora, DATE_FORMAT(c.data_hora, '%Y-%m-%d %H:%i:%s') AS cursor_data,
-           c.estado, c.departamento_id, dep.nome AS departamento_nome,
+           c.estado, c.prioridade, DATE_FORMAT(c.prazo_leitura, '%Y-%m-%d') AS prazo_leitura,
+           c.departamento_id, dep.nome AS departamento_nome,
            c.usuario_id, u.nome AS remetente_nome,
            (SELECT COUNT(*) FROM destinatario d WHERE d.comunicacao_id = c.id) AS total_destinatarios,
            (SELECT COUNT(*) FROM confirmacao_leitura cl WHERE cl.comunicacao_id = c.id) AS total_lidas

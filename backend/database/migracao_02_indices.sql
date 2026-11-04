@@ -1,3 +1,4 @@
+-- ja_aplicada_se: SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'comunicacao' AND INDEX_NAME = 'idx_comunicacao_data'
 -- Índices para histórico paginado e listagens. Rode em bancos já existentes.
 USE cidigital;
 

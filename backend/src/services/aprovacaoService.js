@@ -35,9 +35,12 @@ export const salvarDestinatarios = async (ci_id, destinatarios, departamento_id,
 };
 
 // notifica quem já está salvo como destinatário
-export const notificarDestinatarios = async (ci_id, titulo) => {
+const PREFIXO_PRIORIDADE = { urgente: 'URGENTE — ', importante: 'Importante — ' };
+
+export const notificarDestinatarios = async (ci_id, titulo, prioridade = 'normal') => {
   const destinatarios = await destinatarioModel.listarDestinatariosPorCI(ci_id);
+  const prefixo = PREFIXO_PRIORIDADE[prioridade] || '';
   for (const d of destinatarios) {
-    await notificacaoModel.criarNotificacao(`Nova C.I recebida: ${titulo}`, d.usuario_id, ci_id);
+    await notificacaoModel.criarNotificacao(`${prefixo}Nova C.I recebida: ${titulo}`, d.usuario_id, ci_id);
   }
 };
