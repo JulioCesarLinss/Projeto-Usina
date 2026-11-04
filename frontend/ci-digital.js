@@ -83,6 +83,8 @@ async function fazerLogin() {
   } catch (err) {
     errEl.textContent = err.message || 'E-mail ou senha incorretos.';
     errEl.style.display = 'block';
+  } finally {
+    // volta o botão ao normal tanto no erro quanto no sucesso
     btn.disabled = false;
     btn.innerHTML = 'Entrar no sistema';
   }
@@ -347,14 +349,14 @@ async function trocarSenha() {
   }
 }
 
-function fazerLogout() {
+async function fazerLogout() {
+  // invalida o token no servidor; se falhar (ex.: sem internet), sai do mesmo jeito
+  try { if (state.token) await api('POST', '/usuarios/logout'); } catch (e) { /* segue */ }
   localStorage.removeItem('ci_token');
   localStorage.removeItem('ci_usuario');
-  state.token = null; state.usuario = null;
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-senha').value = '';
+  // recarrega a página para não sobrar nada da sessão anterior
+  // (tela aberta, filtros, listas e o botão de login)
+  location.reload();
 }
 
 // ═══════════════════════════════════════════════════════
