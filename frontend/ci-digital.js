@@ -1954,10 +1954,13 @@ async function carregarRelatorios() {
 }
 
 function renderizarResumo(d) {
-  document.getElementById('rel-total').textContent     = d.total_cis;
-  document.getElementById('rel-taxa').textContent      = d.taxa_leitura + '%';
-  document.getElementById('rel-pendentes').textContent = d.total_pendentes;
-  document.getElementById('rel-media').textContent     = d.media_por_dia;
+  document.getElementById('rel-total').textContent         = d.total_cis;
+  document.getElementById('rel-total-foot').textContent    = `no período · média de ${d.media_por_dia}/dia`;
+  document.getElementById('rel-taxa').textContent          = d.taxa_leitura + '%';
+  document.getElementById('rel-taxa-foot').textContent     = `${d.total_lidas} de ${d.total_destinatarios} leituras confirmadas`;
+  document.getElementById('rel-pendentes').textContent     = d.total_pendentes;
+  document.getElementById('rel-completas').textContent     = d.cis_todas_lidas;
+  document.getElementById('rel-completas-foot').textContent = `de ${d.total_cis} C.I — todos os destinatários leram`;
 }
 
 function criarOuAtualizarChart(id, tipo, dados, opcoes) {
@@ -2011,12 +2014,16 @@ function renderizarGraficoPorDepto(depts) {
 
 function renderizarGraficoTaxaLeitura(depts) {
   const dark = corDark();
-  const labels = depts.map(d => labelMultilinha(NOMES_DEPT[d.nome.toUpperCase()] || d.nome));
+  // leituras dos funcionários de cada setor, com a taxa embaixo do nome
+  const labels = depts.map(d => {
+    const nome = labelMultilinha(NOMES_DEPT[d.nome.toUpperCase()] || d.nome);
+    return [].concat(nome, `${d.taxa_leitura}% lidas`);
+  });
   criarOuAtualizarChart('chart-taxa-leitura', 'bar', {
     labels,
     datasets: [
-      { label: 'Lidas',     data: depts.map(d => d.lidas),    backgroundColor: dark ? '#10B981' : '#388E3C', borderRadius: 4 },
-      { label: 'Pendentes', data: depts.map(d => d.pendentes), backgroundColor: dark ? '#F59E0B' : '#F9A825', borderRadius: 4 }
+      { label: 'Leituras confirmadas', data: depts.map(d => d.lidas),     backgroundColor: dark ? '#10B981' : '#388E3C', borderRadius: 4 },
+      { label: 'Leituras pendentes',   data: depts.map(d => d.pendentes), backgroundColor: dark ? '#F59E0B' : '#F9A825', borderRadius: 4 }
     ]
   }, {
     responsive: false,

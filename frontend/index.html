@@ -596,8 +596,8 @@
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
       <span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Período:</span>
       <div class="tab-bar" style="padding:0;border-bottom:none;gap:4px">
-        <div class="tab active rel-periodo-btn" data-dias="7"  onclick="selecionarPeriodoRel(7, this)">7 dias</div>
-        <div class="tab rel-periodo-btn"        data-dias="30" onclick="selecionarPeriodoRel(30, this)">30 dias</div>
+        <div class="tab rel-periodo-btn"        data-dias="7"  onclick="selecionarPeriodoRel(7, this)">7 dias</div>
+        <div class="tab active rel-periodo-btn" data-dias="30" onclick="selecionarPeriodoRel(30, this)">30 dias</div>
         <div class="tab rel-periodo-btn"        data-dias="90" onclick="selecionarPeriodoRel(90, this)">90 dias</div>
       </div>
     </div>
@@ -610,7 +610,7 @@
           <div class="stat-icon green"><i class="ti ti-send"></i></div>
         </div>
         <div class="stat-value" id="rel-total">—</div>
-        <div class="stat-foot">no período selecionado</div>
+        <div class="stat-foot" id="rel-total-foot">no período selecionado</div>
       </div>
       <div class="stat-card">
         <div class="stat-header">
@@ -618,23 +618,23 @@
           <div class="stat-icon green"><i class="ti ti-eye-check"></i></div>
         </div>
         <div class="stat-value" id="rel-taxa">—</div>
-        <div class="stat-foot">das C.I foram lidas</div>
+        <div class="stat-foot" id="rel-taxa-foot">dos destinatários confirmaram</div>
       </div>
       <div class="stat-card">
         <div class="stat-header">
-          <div class="stat-label">Pendentes</div>
+          <div class="stat-label">Leituras Pendentes</div>
           <div class="stat-icon amber"><i class="ti ti-clock"></i></div>
         </div>
         <div class="stat-value" id="rel-pendentes">—</div>
-        <div class="stat-foot">sem nenhuma leitura</div>
+        <div class="stat-foot">pessoas ainda não confirmaram</div>
       </div>
       <div class="stat-card">
         <div class="stat-header">
-          <div class="stat-label">Média por Dia</div>
-          <div class="stat-icon blue"><i class="ti ti-trending-up"></i></div>
+          <div class="stat-label">C.I 100% Lidas</div>
+          <div class="stat-icon blue"><i class="ti ti-checks"></i></div>
         </div>
-        <div class="stat-value" id="rel-media">—</div>
-        <div class="stat-foot">C.I enviadas/dia</div>
+        <div class="stat-value" id="rel-completas">—</div>
+        <div class="stat-foot" id="rel-completas-foot">todos os destinatários leram</div>
       </div>
     </div>
 

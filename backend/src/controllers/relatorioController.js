@@ -1,9 +1,12 @@
 import * as relatorioModel from '../models/relatorioModel.js';
 import { DatabaseError } from '../utils/appError.js';
 
+// período em dias, entre 1 e 365 (padrão 30)
+const lerPeriodo = (valor) => Math.min(Math.max(parseInt(valor) || 30, 1), 365);
+
 export const getResumo = async (req, res, next) => {
   try {
-    const periodo = parseInt(req.query.periodo) || 30;
+    const periodo = lerPeriodo(req.query.periodo);
     const dados = await relatorioModel.resumo(periodo);
     res.status(200).json({ sucesso: true, dados });
   } catch (err) {
@@ -13,7 +16,7 @@ export const getResumo = async (req, res, next) => {
 
 export const getPorDepartamento = async (req, res, next) => {
   try {
-    const periodo = parseInt(req.query.periodo) || 30;
+    const periodo = lerPeriodo(req.query.periodo);
     const dados = await relatorioModel.porDepartamento(periodo);
     res.status(200).json({ sucesso: true, dados });
   } catch (err) {
