@@ -86,15 +86,48 @@ CREATE TABLE anexo(
   FOREIGN KEY (comunicacao_id) REFERENCES comunicacao(id)
 );
 
+-- reuniões (agenda): presenciais ou online, com convidados e confirmação de presença
+CREATE TABLE reuniao (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  titulo VARCHAR(150) NOT NULL,
+  descricao TEXT NULL,
+  inicio DATETIME NOT NULL,
+  fim DATETIME NOT NULL,
+  modalidade ENUM('presencial','online') NOT NULL,
+  local VARCHAR(200) NULL,
+  link VARCHAR(500) NULL,
+  organizador_id INT NOT NULL,
+  usina_id INT NOT NULL,
+  estado ENUM('agendada','cancelada') NOT NULL DEFAULT 'agendada',
+  lembrete_enviado_em DATETIME NULL, -- lembrete de 1 hora antes já disparado
+  criado_em DATETIME NOT NULL,
+  FOREIGN KEY (organizador_id) REFERENCES usuario(id),
+  FOREIGN KEY (usina_id) REFERENCES usina(id)
+);
+CREATE INDEX idx_reuniao_inicio ON reuniao (estado, inicio);
+
+CREATE TABLE reuniao_participante (
+  reuniao_id INT NOT NULL,
+  usuario_id INT NOT NULL,
+  resposta ENUM('pendente','vou','nao_vou') NOT NULL DEFAULT 'pendente',
+  respondido_em DATETIME NULL,
+  PRIMARY KEY (reuniao_id, usuario_id),
+  INDEX idx_participante_usuario (usuario_id, reuniao_id),
+  FOREIGN KEY (reuniao_id) REFERENCES reuniao(id),
+  FOREIGN KEY (usuario_id) REFERENCES usuario(id)
+);
+
 CREATE TABLE notificacoes(
   id INT PRIMARY KEY AUTO_INCREMENT,
   mensagem TEXT,
   data_hora DATETIME NOT NULL,
   usuario_id INT NOT NULL,
-  comunicacao_id INT NOT NULL,
+  comunicacao_id INT NULL,  -- notificação de C.I. ...
+  reuniao_id INT NULL,      -- ... ou de reunião
   lida TINYINT NOT NULL DEFAULT 0,
   FOREIGN KEY (usuario_id) REFERENCES usuario(id),
-  FOREIGN KEY (comunicacao_id) REFERENCES comunicacao(id)
+  FOREIGN KEY (comunicacao_id) REFERENCES comunicacao(id),
+  FOREIGN KEY (reuniao_id) REFERENCES reuniao(id)
 );
 
 CREATE TABLE logs_sistema(

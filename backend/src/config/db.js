@@ -35,6 +35,10 @@ try {
   // sem permissão para criar bancos, segue: o teste de conexão abaixo mostra o erro real
 }
 
+// Fuso horário do sistema (padrão: Brasília, -03:00). Vale para o NOW()/CURDATE() do MySQL
+// e para as datas do JavaScript, mesmo quando o servidor roda em UTC (como no Railway).
+const fuso = /^[+-]\d{2}:\d{2}$/.test(process.env.DB_TIMEZONE || '') ? process.env.DB_TIMEZONE : '-03:00';
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   port,
@@ -45,7 +49,11 @@ const pool = mysql.createPool({
   connectionLimit: connectionLimit,
   queueLimit: 0,
   enableKeepAlive: true,
-  keepAliveInitialDelayMs: 0
+  timezone: fuso
+});
+
+pool.on('connection', (conn) => {
+  conn.query(`SET time_zone = '${fuso}'`);
 });
 
 

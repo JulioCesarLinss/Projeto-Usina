@@ -1346,3 +1346,89 @@ body.dark #toast-container .toast.info { background: #0D2035; }
 body.dark .top-accent {
   background: linear-gradient(90deg, #0A1206 0%, #2D6A10 50%, #5A3A1A 100%);
 }
+
+/* ── REUNIÕES (agenda) ── */
+.reu-layout { display: grid; grid-template-columns: minmax(320px, 1.1fr) 1fr; gap: 20px; align-items: start; }
+.reu-cal { padding: 0 16px 8px; }
+.reu-cal-semana, .reu-cal-grade { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.reu-cal-semana span { text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); padding: 6px 0; }
+.reu-dia {
+  min-height: 62px; padding: 6px 7px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--white); cursor: pointer; display: flex; flex-direction: column; justify-content: space-between;
+  transition: background .15s, border-color .15s;
+}
+.reu-dia:hover { background: var(--usga-xpale); border-color: var(--border-mid); }
+.reu-dia.vazio { border: none; background: transparent; cursor: default; }
+.reu-dia.passado .reu-dia-num { color: var(--text-faint); }
+.reu-dia.hoje { border-color: var(--usga-mid); }
+.reu-dia.hoje .reu-dia-num { color: var(--usga-mid); font-weight: 700; }
+.reu-dia.selecionado { background: var(--usga-pale); border-color: var(--usga-mid); box-shadow: 0 0 0 2px rgba(67,147,31,.15); }
+.reu-dia-num { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.reu-dia-pontos { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; min-height: 8px; }
+.reu-dia-pontos small { font-size: 10px; color: var(--text-muted); }
+.reu-ponto { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.reu-ponto.presencial { background: var(--usga-mid); }
+.reu-ponto.online     { background: var(--info); }
+.reu-ponto.cancelada  { background: #B8B8B0; }
+.reu-legenda { display: flex; gap: 16px; padding: 8px 20px 16px; font-size: 12px; color: var(--text-muted); }
+.reu-legenda span { display: flex; align-items: center; gap: 6px; }
+
+.reu-dia-lista { padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.reu-card { display: flex; gap: 14px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); }
+.reu-card.passada { opacity: .7; }
+.reu-card.cancelada { opacity: .6; }
+.reu-card.cancelada .reu-card-titulo { text-decoration: line-through; }
+.reu-card-hora { font-weight: 700; font-size: 15px; color: var(--usga-dark); min-width: 52px; display: flex; flex-direction: column; }
+.reu-card-hora small { font-weight: 400; font-size: 11px; color: var(--text-muted); }
+.reu-card-corpo { flex: 1; min-width: 0; }
+.reu-card-titulo { font-weight: 600; font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.reu-card-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.reu-card-desc { font-size: 13px; color: var(--text-mid); margin-top: 6px; }
+.reu-card-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.reu-onde { font-size: 13px; color: var(--text-mid); display: inline-flex; align-items: center; gap: 4px; margin-right: auto; }
+.reu-entrar { text-decoration: none; padding: 6px 12px; font-size: 13px; margin-right: auto; }
+.reu-modalidade { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 1px 7px; border-radius: 4px; }
+.reu-modalidade.presencial { background: var(--usga-xpale); color: var(--usga-dark); }
+.reu-modalidade.online     { background: #E8F2FA; color: var(--info); }
+.reu-resp {
+  border: 1px solid var(--border-mid); background: var(--white); color: var(--text-mid);
+  border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 4px; font-family: inherit;
+}
+.reu-resp:hover { background: var(--surface); }
+.reu-resp.ativo.vou { background: var(--usga-mid); color: white; border-color: var(--usga-mid); }
+.reu-resp.ativo.nao { background: var(--danger); color: white; border-color: var(--danger); }
+.reu-presenca { margin-top: 10px; background: none; border: none; padding: 0; font-size: 12px; color: var(--text-muted); cursor: pointer; display: inline-flex; gap: 4px; align-items: center; font-family: inherit; }
+.reu-presenca:hover { color: var(--usga-mid); }
+.reu-participantes { margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.reu-part-linha { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.reu-part-linha small { color: var(--text-muted); margin-left: 4px; }
+.reu-part-resp { font-size: 11px; font-weight: 600; }
+.reu-part-resp.vou  { color: var(--usga-mid); }
+.reu-part-resp.nao  { color: var(--danger); }
+.reu-part-resp.pend { color: var(--text-muted); }
+
+.reu-usuarios-lista {
+  margin-top: 8px; max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
+  padding: 10px; background: var(--usga-xpale); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.reu-usuario { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
+.reu-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+.reu-chips small { color: var(--text-muted); font-size: 12px; margin-right: 4px; }
+.reu-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--usga-pale); color: var(--usga-dark); border-radius: 20px; padding: 3px 6px 3px 10px; font-size: 12px; font-weight: 500; }
+.reu-chip i { cursor: pointer; font-size: 13px; opacity: .7; }
+.reu-chip i:hover { opacity: 1; color: var(--danger); }
+
+@media (max-width: 900px) {
+  .reu-layout { grid-template-columns: 1fr; }
+  .reu-dia { min-height: 46px; padding: 4px; }
+}
+
+body.dark .reu-dia, body.dark .reu-card, body.dark .reu-resp { background: #132813; border-color: rgba(37,60,24,0.6); }
+body.dark .reu-dia:hover { background: #1A2712; }
+body.dark .reu-dia.selecionado { background: #1D3212; border-color: #43931F; }
+body.dark .reu-dia.vazio { background: transparent; }
+body.dark .reu-modalidade.online { background: #0D1F2A; color: #5BA3D0; }
+body.dark .reu-modalidade.presencial { background: #1A2E10; color: #7AB260; }
+body.dark .reu-chip { background: #1D3212; color: #9DBF80; }
+body.dark .reu-card-hora { color: #9DBF80; }

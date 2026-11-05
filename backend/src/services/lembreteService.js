@@ -37,6 +37,32 @@ export const executarLembretesDePrazo = async () => {
   return { cis: cis.length, lembrados: total };
 };
 
+// Lembrete de reunião: 1 hora antes do início, para os convidados que não responderam
+// "não vou" e para o organizador. Mesma "reserva" do prazo: cada reunião é avisada uma vez.
+export const executarLembretesDeReuniao = async () => {
+  const [reunioes] = await pool.query(
+    `SELECT id, titulo, organizador_id, DATE_FORMAT(inicio, '%H:%i') AS hora FROM reuniao
+     WHERE estado = 'agendada' AND lembrete_enviado_em IS NULL
+       AND inicio > NOW() AND inicio <= NOW() + INTERVAL 1 HOUR`
+  );
+
+  let total = 0;
+  for (const r of reunioes) {
+    const [reserva] = await pool.query(
+      'UPDATE reuniao SET lembrete_enviado_em = NOW() WHERE id = ? AND lembrete_enviado_em IS NULL', [r.id]);
+    if (reserva.affectedRows !== 1) continue;
+    const [res] = await pool.query(
+      `INSERT INTO notificacoes (mensagem, data_hora, usuario_id, reuniao_id)
+       SELECT ?, NOW(), p.usuario_id, p.reuniao_id FROM reuniao_participante p
+       WHERE p.reuniao_id = ? AND p.resposta <> 'nao_vou'
+       UNION ALL SELECT ?, NOW(), ?, ?`,
+      [`Reunião em breve (${r.hora}): ${r.titulo}`, r.id, `Reunião em breve (${r.hora}): ${r.titulo}`, r.organizador_id, r.id]
+    );
+    total += res.affectedRows;
+  }
+  return { reunioes: reunioes.length, lembrados: total };
+};
+
 // lembrete manual: no máximo um por hora para cada C.I.
 export const lembreteManualRecente = async (ci_id) => {
   const [[row]] = await pool.query(

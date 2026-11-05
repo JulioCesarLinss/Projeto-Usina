@@ -999,7 +999,9 @@ async function carregarNotificacoes() {
     } else {
       list.innerHTML = naoLidasList.slice(0, 8).map(n => {
         const tempo = n.data_hora ? formatarTempoRelativo(new Date(n.data_hora)) : '';
-        return `<div class="notif-item unread" onclick="marcarNotifLida(${n.id}, this);${n.comunicacao_id ? `abrirCIDoBackend(${n.comunicacao_id})` : ''}" style="cursor:pointer">
+        const abrir = n.reuniao_id ? `abrirReuniaoNaAgenda(${n.reuniao_id})`
+          : n.comunicacao_id ? `abrirCIDoBackend(${n.comunicacao_id})` : '';
+        return `<div class="notif-item unread" onclick="marcarNotifLida(${n.id}, this);${abrir}" style="cursor:pointer">
           <div class="notif-icon recv"><i class="ti ti-bell"></i></div>
           <div class="notif-body">
             <div class="notif-text">${n.mensagem}</div>
@@ -1264,6 +1266,7 @@ function showPage(name) {
   if (name === 'visaogeral') carregarVisaoGeral();
   if (name === 'controle') carregarControleAcesso();
   if (name === 'relatorios') carregarRelatorios();
+  if (name === 'reunioes') carregarReunioes();
   if (name === 'nova') { cancelarEdicaoRascunho(); carregarRascunhos(); }
   if (name === 'configuracoes' && state.usuario) {
     const u = state.usuario;
@@ -1286,7 +1289,7 @@ function showPage(name) {
       document.getElementById(id).value = '';
     });
   }
-  ['dashboard','nova','auditoria','historico','configuracoes','visaogeral','controle','relatorios'].forEach(p => {
+  ['dashboard','nova','reunioes','auditoria','historico','configuracoes','visaogeral','controle','relatorios'].forEach(p => {
     var el = document.getElementById('page-'+p);
     if(el) el.style.display = (p === name) ? '' : 'none';
   });
@@ -1300,6 +1303,7 @@ function showPage(name) {
     configuracoes: 'Configurações <span>/ Minha Conta</span>',
     controle: 'Controle de Acesso <span>/ Usuários do Sistema</span>',
     relatorios: 'Relatórios <span>/ Análise de Comunicações</span>',
+    reunioes: 'Reuniões <span>/ Agenda</span>',
   };
   document.getElementById('page-title').innerHTML = titles[name] || 'C.I Digital';
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -1624,6 +1628,10 @@ function aplicarPermissoesFrontend(usuario) {
   // "enviar em nome de um gerente" é exclusivo do secretário
   document.querySelectorAll('.secretario-only').forEach(el => {
     el.style.display = cargo === 5 ? '' : 'none';
+  });
+  // marcar reuniões: supervisor, gerente e secretário
+  document.querySelectorAll('.organizador-reuniao').forEach(el => {
+    el.style.display = REU_ORGANIZADORES.includes(cargo) ? '' : 'none';
   });
   // telas que listam conteúdo de C.I. não se aplicam ao administrador
   if (cargo === 1) document.querySelectorAll('.sem-admin').forEach(el => { el.style.display = 'none'; });
@@ -2239,6 +2247,327 @@ function aplicarDarkModeInicial() {
     document.body.classList.add('dark');
     const btn = document.getElementById('btn-dark-mode');
     if (btn) btn.innerHTML = '<i class="ti ti-sun"></i>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  REUNIÕES — agenda (calendário do mês + lista do dia)
+// ═══════════════════════════════════════════════════════
+// supervisor (3), gerente (2) e secretário (5) marcam; os demais só veem as reuniões para as quais foram convidados
+const REU_ORGANIZADORES = [2, 3, 5];
+const REU_MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const reuniaoState = {
+  ano: new Date().getFullYear(),
+  mes: new Date().getMonth(),     // 0-11
+  diaSelecionado: hojeISOLocal(), // 'AAAA-MM-DD'
+  reunioes: [],
+  editandoId: null,
+  convidados: new Map(),          // usuario_id -> nome
+  usuariosDept: []
+};
+
+const isoDia = (a, m, d) => `${a}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+async function carregarReunioes() {
+  const { ano, mes } = reuniaoState;
+  document.getElementById('reu-mes-titulo').textContent = `${REU_MESES[mes]} ${ano}`;
+  const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+  try {
+    const { dados } = await api('GET', `/reunioes?inicio=${isoDia(ano, mes, 1)}&fim=${isoDia(ano, mes, ultimoDia)}`);
+    reuniaoState.reunioes = dados || [];
+  } catch (err) {
+    reuniaoState.reunioes = [];
+    toast('Erro ao carregar reuniões: ' + err.message, 'error');
+  }
+  renderizarCalendario();
+  renderizarDiaReunioes();
+}
+
+function renderizarCalendario() {
+  const { ano, mes, diaSelecionado, reunioes } = reuniaoState;
+  const primeiroSemana = new Date(ano, mes, 1).getDay();
+  const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+  const hoje = hojeISOLocal();
+  const porDia = {};
+  reunioes.forEach(r => { (porDia[r.inicio.slice(0, 10)] ||= []).push(r); });
+
+  let html = '';
+  for (let i = 0; i < primeiroSemana; i++) html += '<div class="reu-dia vazio"></div>';
+  for (let d = 1; d <= ultimoDia; d++) {
+    const iso = isoDia(ano, mes, d);
+    const doDia = porDia[iso] || [];
+    const pontos = doDia.slice(0, 4).map(r =>
+      `<i class="reu-ponto ${r.estado === 'cancelada' ? 'cancelada' : r.modalidade}"></i>`).join('');
+    const classes = ['reu-dia', iso === hoje ? 'hoje' : '', iso === diaSelecionado ? 'selecionado' : '', iso < hoje ? 'passado' : ''].join(' ');
+    html += `<div class="${classes}" onclick="selecionarDiaReuniao('${iso}')" title="${doDia.length ? doDia.length + ' reunião(ões)' : ''}">
+      <span class="reu-dia-num">${d}</span>
+      <span class="reu-dia-pontos">${pontos}${doDia.length > 4 ? '<small>+' + (doDia.length - 4) + '</small>' : ''}</span>
+    </div>`;
+  }
+  document.getElementById('reu-cal-grade').innerHTML = html;
+}
+
+function selecionarDiaReuniao(iso) {
+  reuniaoState.diaSelecionado = iso;
+  renderizarCalendario();
+  renderizarDiaReunioes();
+}
+
+function mudarMesReuniao(delta) {
+  let { ano, mes } = reuniaoState;
+  mes += delta;
+  if (mes < 0) { mes = 11; ano--; }
+  if (mes > 11) { mes = 0; ano++; }
+  Object.assign(reuniaoState, { ano, mes, diaSelecionado: isoDia(ano, mes, 1) });
+  carregarReunioes();
+}
+
+function irParaHojeReuniao() {
+  const h = new Date();
+  Object.assign(reuniaoState, { ano: h.getFullYear(), mes: h.getMonth(), diaSelecionado: hojeISOLocal() });
+  carregarReunioes();
+}
+
+// abre a agenda já no dia de uma reunião (usado pelas notificações)
+async function abrirReuniaoNaAgenda(reuniaoId) {
+  showPage('reunioes');
+  try {
+    const { dados } = await api('GET', '/reunioes/' + reuniaoId);
+    const [a, m] = dados.inicio.slice(0, 7).split('-').map(Number);
+    Object.assign(reuniaoState, { ano: a, mes: m - 1, diaSelecionado: dados.inicio.slice(0, 10) });
+    await carregarReunioes();
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+function renderizarDiaReunioes() {
+  const { diaSelecionado, reunioes } = reuniaoState;
+  const [a, m, d] = diaSelecionado.split('-');
+  const nomeDia = new Date(+a, +m - 1, +d).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+  document.getElementById('reu-dia-titulo').textContent = nomeDia.charAt(0).toUpperCase() + nomeDia.slice(1);
+
+  const lista = document.getElementById('reu-dia-lista');
+  const doDia = reunioes.filter(r => r.inicio.slice(0, 10) === diaSelecionado);
+  if (doDia.length === 0) {
+    lista.innerHTML = `<div class="empty-state"><i class="ti ti-calendar-off"></i><p>Nenhuma reunião neste dia.</p></div>`;
+    return;
+  }
+  const meuId = state.usuario?.id;
+  lista.innerHTML = doDia.map(r => {
+    const cancelada = r.estado === 'cancelada';
+    const passou = !!r.ja_comecou;
+    const ehOrg = r.organizador_id === meuId;
+    const onde = r.modalidade === 'online'
+      ? (cancelada ? '<span class="reu-onde"><i class="ti ti-video"></i> Online</span>'
+         : `<a class="btn btn-primary reu-entrar" href="${escHtml(r.link)}" target="_blank" rel="noopener noreferrer"><i class="ti ti-video"></i> Entrar na reunião</a>`)
+      : `<span class="reu-onde"><i class="ti ti-map-pin"></i> ${escHtml(r.local)}</span>`;
+
+    let acoes = '';
+    if (!cancelada && !passou) {
+      if (ehOrg) {
+        acoes = `<button class="btn-ghost" onclick="abrirModalReuniao(${r.id})"><i class="ti ti-edit"></i> Editar</button>
+                 <button class="btn-ghost" style="color:var(--danger)" onclick="cancelarReuniao(${r.id})"><i class="ti ti-calendar-x"></i> Cancelar</button>`;
+      } else {
+        acoes = `<button class="reu-resp ${r.minha_resposta === 'vou' ? 'ativo vou' : ''}" onclick="responderReuniao(${r.id},'vou')"><i class="ti ti-check"></i> Vou</button>
+                 <button class="reu-resp ${r.minha_resposta === 'nao_vou' ? 'ativo nao' : ''}" onclick="responderReuniao(${r.id},'nao_vou')"><i class="ti ti-x"></i> Não vou</button>`;
+      }
+    } else if (!ehOrg && r.minha_resposta && r.minha_resposta !== 'pendente') {
+      acoes = `<span class="reu-onde">Sua resposta: ${r.minha_resposta === 'vou' ? 'Vou' : 'Não vou'}</span>`;
+    }
+
+    const pendentes = r.total_convidados - r.total_vou - r.total_nao_vou;
+    const presenca = ehOrg
+      ? `<button class="reu-presenca" onclick="alternarParticipantesReuniao(${r.id})">
+           <i class="ti ti-users"></i> ${r.total_vou} vão · ${r.total_nao_vou} não vão · ${pendentes} sem resposta
+           <i class="ti ti-chevron-down"></i>
+         </button>
+         <div class="reu-participantes" id="reu-part-${r.id}" style="display:none"></div>`
+      : '';
+
+    return `<div class="reu-card ${cancelada ? 'cancelada' : ''} ${passou ? 'passada' : ''}">
+      <div class="reu-card-hora">${r.inicio.slice(11, 16)}<small>até ${r.fim.slice(11, 16)}</small></div>
+      <div class="reu-card-corpo">
+        <div class="reu-card-titulo">
+          ${cancelada ? '<span class="prio-badge urgente">Cancelada</span>' : ''}
+          <span class="reu-modalidade ${r.modalidade}">${r.modalidade === 'online' ? 'Online' : 'Presencial'}</span>
+          ${escHtml(r.titulo)}
+        </div>
+        <div class="reu-card-meta">Marcada por ${ehOrg ? 'você' : escHtml(r.organizador_nome)}</div>
+        ${r.descricao ? `<div class="reu-card-desc">${escHtml(r.descricao).replace(/\n/g, '<br>')}</div>` : ''}
+        <div class="reu-card-acoes">${onde}${acoes}</div>
+        ${presenca}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function alternarParticipantesReuniao(id) {
+  const box = document.getElementById('reu-part-' + id);
+  if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+  box.style.display = '';
+  box.innerHTML = '<span class="spin"></span>';
+  try {
+    const { dados } = await api('GET', '/reunioes/' + id);
+    const ROT = { vou: ['vou', 'Vai'], nao_vou: ['nao', 'Não vai'], pendente: ['pend', 'Sem resposta'] };
+    box.innerHTML = dados.participantes.map(p => `
+      <div class="reu-part-linha">
+        <span>${escHtml(p.nome)} <small>${escHtml(p.departamento_nome || '')}</small></span>
+        <span class="reu-part-resp ${ROT[p.resposta][0]}">${ROT[p.resposta][1]}</span>
+      </div>`).join('');
+  } catch (err) { box.innerHTML = escHtml(err.message); }
+}
+
+async function responderReuniao(id, resposta) {
+  try {
+    const data = await api('POST', `/reunioes/${id}/responder`, { resposta });
+    toast(data.mensagem);
+    await carregarReunioes();
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function cancelarReuniao(id) {
+  if (!confirm('Cancelar esta reunião? Todos os convidados serão avisados.')) return;
+  try {
+    const data = await api('POST', `/reunioes/${id}/cancelar`);
+    toast(data.mensagem);
+    await carregarReunioes();
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+// ── modal nova / editar ──
+async function abrirModalReuniao(id = null) {
+  reuniaoState.editandoId = id;
+  reuniaoState.convidados = new Map();
+  document.getElementById('reu-modal-titulo').textContent = id ? 'Editar reunião' : 'Nova reunião';
+  document.getElementById('reu-btn-salvar').innerHTML = `<i class="ti ti-check"></i> ${id ? 'Salvar alterações' : 'Marcar reunião'}`;
+  const sel = document.getElementById('reu-dept');
+  sel.innerHTML = '<option value="">Escolha um departamento...</option>' +
+    state.departamentos.map(d => `<option value="${d.id}">${escHtml(NOMES_DEPT[d.nome.toUpperCase()] || d.nome)}</option>`).join('');
+  document.getElementById('reu-usuarios-lista').style.display = 'none';
+  document.getElementById('reu-todos-dept').style.display = 'none';
+  const hoje = hojeISOLocal();
+  document.getElementById('reu-data').min = hoje;
+
+  if (id) {
+    try {
+      const { dados: r } = await api('GET', '/reunioes/' + id);
+      document.getElementById('reu-titulo').value = r.titulo;
+      document.getElementById('reu-data').value = r.inicio.slice(0, 10);
+      document.getElementById('reu-inicio').value = r.inicio.slice(11, 16);
+      document.getElementById('reu-fim').value = r.fim.slice(11, 16);
+      document.querySelector(`input[name="reu-modalidade"][value="${r.modalidade}"]`).checked = true;
+      document.getElementById('reu-local').value = r.local || '';
+      document.getElementById('reu-link').value = r.link || '';
+      document.getElementById('reu-descricao').value = r.descricao || '';
+      r.participantes.forEach(p => reuniaoState.convidados.set(p.usuario_id, p.nome));
+    } catch (err) { toast(err.message, 'error'); return; }
+  } else {
+    document.getElementById('reu-titulo').value = '';
+    document.getElementById('reu-data').value = reuniaoState.diaSelecionado >= hoje ? reuniaoState.diaSelecionado : hoje;
+    document.getElementById('reu-inicio').value = '09:00';
+    document.getElementById('reu-fim').value = '10:00';
+    document.querySelector('input[name="reu-modalidade"][value="presencial"]').checked = true;
+    document.getElementById('reu-local').value = '';
+    document.getElementById('reu-link').value = '';
+    document.getElementById('reu-descricao').value = '';
+  }
+  onModalidadeReuniao();
+  renderizarChipsReuniao();
+  document.getElementById('modal-reuniao').style.display = 'flex';
+  setTimeout(() => document.getElementById('reu-titulo').focus(), 80);
+}
+
+function fecharModalReuniao() {
+  document.getElementById('modal-reuniao').style.display = 'none';
+}
+
+function onModalidadeReuniao() {
+  const online = document.querySelector('input[name="reu-modalidade"]:checked').value === 'online';
+  document.getElementById('reu-local-wrap').style.display = online ? 'none' : '';
+  document.getElementById('reu-link-wrap').style.display = online ? '' : 'none';
+}
+
+async function carregarUsuariosDeptReuniao() {
+  const depId = document.getElementById('reu-dept').value;
+  const lista = document.getElementById('reu-usuarios-lista');
+  const btnTodos = document.getElementById('reu-todos-dept');
+  if (!depId) { lista.style.display = 'none'; btnTodos.style.display = 'none'; return; }
+  try {
+    const { dados } = await api('GET', '/usuarios/departamento/' + depId);
+    reuniaoState.usuariosDept = (dados || []).filter(u => u.id !== state.usuario?.id);
+    renderizarUsuariosDeptReuniao();
+    lista.style.display = '';
+    btnTodos.style.display = reuniaoState.usuariosDept.length ? '' : 'none';
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+function renderizarUsuariosDeptReuniao() {
+  const lista = document.getElementById('reu-usuarios-lista');
+  const usuarios = reuniaoState.usuariosDept;
+  lista.innerHTML = usuarios.length
+    ? usuarios.map(u => `<label class="reu-usuario">
+        <input type="checkbox" ${reuniaoState.convidados.has(u.id) ? 'checked' : ''}
+          onchange="alternarConvidadoReuniao(${u.id}, this.checked, '${encodeURIComponent(u.nome)}')"> ${escHtml(u.nome)}
+      </label>`).join('')
+    : '<span style="color:var(--text-muted);font-size:13px">Nenhum outro usuário neste setor.</span>';
+}
+
+function alternarConvidadoReuniao(id, marcado, nomeCod) {
+  if (marcado) reuniaoState.convidados.set(id, decodeURIComponent(nomeCod));
+  else reuniaoState.convidados.delete(id);
+  renderizarChipsReuniao();
+}
+
+function marcarTodosDeptReuniao() {
+  reuniaoState.usuariosDept.forEach(u => reuniaoState.convidados.set(u.id, u.nome));
+  renderizarUsuariosDeptReuniao();
+  renderizarChipsReuniao();
+}
+
+function removerConvidadoReuniao(id) {
+  reuniaoState.convidados.delete(id);
+  renderizarUsuariosDeptReuniao();
+  renderizarChipsReuniao();
+}
+
+function renderizarChipsReuniao() {
+  const box = document.getElementById('reu-chips');
+  const itens = [...reuniaoState.convidados.entries()];
+  box.innerHTML = itens.length
+    ? `<small>${itens.length} convidado(s):</small>` + itens.map(([id, nome]) =>
+        `<span class="reu-chip">${escHtml(nome)} <i class="ti ti-x" onclick="removerConvidadoReuniao(${id})" title="Remover"></i></span>`).join('')
+    : '<small>Nenhum convidado ainda — escolha um setor acima e marque as pessoas.</small>';
+}
+
+async function salvarReuniao() {
+  const modalidade = document.querySelector('input[name="reu-modalidade"]:checked').value;
+  const corpo = {
+    titulo: document.getElementById('reu-titulo').value.trim(),
+    data: document.getElementById('reu-data').value,
+    hora_inicio: document.getElementById('reu-inicio').value,
+    hora_fim: document.getElementById('reu-fim').value,
+    modalidade,
+    local: modalidade === 'presencial' ? document.getElementById('reu-local').value.trim() : null,
+    link: modalidade === 'online' ? document.getElementById('reu-link').value.trim() : null,
+    descricao: document.getElementById('reu-descricao').value.trim(),
+    participantes: [...reuniaoState.convidados.keys()]
+  };
+  if (!corpo.titulo || !corpo.data || !corpo.hora_inicio || !corpo.hora_fim) { toast('Preencha assunto, data e horário.', 'error'); return; }
+  if (corpo.participantes.length === 0) { toast('Escolha pelo menos um convidado.', 'error'); return; }
+
+  const btn = document.getElementById('reu-btn-salvar');
+  btn.disabled = true;
+  try {
+    const id = reuniaoState.editandoId;
+    const data = await api(id ? 'PUT' : 'POST', id ? '/reunioes/' + id : '/reunioes', corpo);
+    toast(data.mensagem);
+    fecharModalReuniao();
+    const [a, m] = corpo.data.split('-').map(Number);
+    Object.assign(reuniaoState, { ano: a, mes: m - 1, diaSelecionado: corpo.data });
+    await carregarReunioes();
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
   }
 }
 

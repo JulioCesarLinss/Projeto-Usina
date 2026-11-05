@@ -21,7 +21,8 @@ import { securityHeaders } from './src/middlewares/securityHeadersMiddleware.js'
 import { rateLimiter } from './src/middlewares/rateLimitMiddleware.js';
 import { sanitizeInputs, validateContentType } from './src/middlewares/sanitizeMiddleware.js';
 import { auditMiddleware } from './src/middlewares/auditMiddleware.js';
-import { executarLembretesDePrazo } from './src/services/lembreteService.js';
+import { executarLembretesDePrazo, executarLembretesDeReuniao } from './src/services/lembreteService.js';
+import reuniaoRoutes from './src/routes/reuniaoRoutes.js';
 import { aplicarMigracoes } from './src/config/migracoes.js';
 
 dotenv.config();
@@ -120,6 +121,7 @@ app.use('/api/departamentos', departamentoRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
 app.use('/api/relatorios', relatorioRoutes);
 app.use('/api/historico', historicoRoutes);
+app.use('/api/reunioes', reuniaoRoutes);
 
 // ==================== ROTA NÃO ENCONTRADA ====================
 app.use((req, res) => {
@@ -147,13 +149,16 @@ try {
 app.listen(PORT, () => {
   console.log(`✅ Servidor rodando em http://localhost:${PORT}`);
   console.log(`📡 API disponível em http://localhost:${PORT}/api`);
-  iniciarLembretesDePrazo();
+  iniciarLembretes();
 });
 
-// ==================== LEMBRETE AUTOMÁTICO DE PRAZO ====================
-// Ao iniciar e depois a cada hora: avisa quem ainda não leu as C.I.s cujo prazo vence hoje.
-const UMA_HORA = 60 * 60 * 1000;
-function iniciarLembretesDePrazo() {
+// ==================== LEMBRETES AUTOMÁTICOS ====================
+// Ao iniciar e depois a cada 5 minutos:
+//  • prazo de leitura: avisa quem ainda não leu as C.I.s cujo prazo vence hoje;
+//  • reuniões: avisa os convidados 1 hora antes do início.
+// Cada aviso é disparado uma única vez (ver lembreteService).
+const CINCO_MINUTOS = 5 * 60 * 1000;
+function iniciarLembretes() {
   const rodar = async () => {
     try {
       const r = await executarLembretesDePrazo();
@@ -161,7 +166,13 @@ function iniciarLembretesDePrazo() {
     } catch (err) {
       console.error('Erro nos lembretes de prazo:', err.message);
     }
+    try {
+      const r = await executarLembretesDeReuniao();
+      if (r.lembrados > 0) console.log(`🔔 Lembretes de reunião: ${r.lembrados} convidado(s) em ${r.reunioes} reunião(ões)`);
+    } catch (err) {
+      console.error('Erro nos lembretes de reunião:', err.message);
+    }
   };
   rodar();
-  setInterval(rodar, UMA_HORA);
+  setInterval(rodar, CINCO_MINUTOS);
 }

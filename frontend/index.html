@@ -130,6 +130,10 @@
       <i class="ti ti-send"></i>
       Nova C.I
     </div>
+    <div class="nav-item" onclick="showPage('reunioes')">
+      <i class="ti ti-calendar-event"></i>
+      Reuniões
+    </div>
     <div class="nav-label">Gerencial</div>
     <div class="nav-item admin-only" onclick="showPage('historico')">
       <i class="ti ti-history"></i>
@@ -533,6 +537,41 @@
   </div>
 
   <!-- PAGE: HISTÓRICO (administrador: somente metadados, sem conteúdo) -->
+  <!-- PAGE: REUNIÕES (agenda) -->
+  <div class="page" id="page-reunioes" style="display:none">
+    <div class="reu-layout">
+      <div class="card reu-cal-card">
+        <div class="card-header">
+          <div class="card-title"><i class="ti ti-calendar-event"></i> <span id="reu-mes-titulo">Agenda</span></div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="page-btn" onclick="mudarMesReuniao(-1)" title="Mês anterior"><i class="ti ti-chevron-left"></i></button>
+            <button class="btn-ghost" onclick="irParaHojeReuniao()">Hoje</button>
+            <button class="page-btn" onclick="mudarMesReuniao(1)" title="Próximo mês"><i class="ti ti-chevron-right"></i></button>
+          </div>
+        </div>
+        <div class="reu-cal">
+          <div class="reu-cal-semana"><span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span></div>
+          <div class="reu-cal-grade" id="reu-cal-grade"></div>
+        </div>
+        <div class="reu-legenda">
+          <span><i class="reu-ponto presencial"></i> Presencial</span>
+          <span><i class="reu-ponto online"></i> Online</span>
+          <span><i class="reu-ponto cancelada"></i> Cancelada</span>
+        </div>
+      </div>
+
+      <div class="card reu-dia-card">
+        <div class="card-header">
+          <div class="card-title"><i class="ti ti-list-details"></i> <span id="reu-dia-titulo">Reuniões do dia</span></div>
+          <button class="btn btn-primary organizador-reuniao" onclick="abrirModalReuniao()" style="display:none">
+            <i class="ti ti-plus"></i> Nova reunião
+          </button>
+        </div>
+        <div id="reu-dia-lista" class="reu-dia-lista"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="page" id="page-historico" style="display:none">
     <div class="card">
       <div class="card-header">
@@ -754,6 +793,75 @@
 </div><!-- end #app -->
 
 <!-- MODAL: NOVO DEPARTAMENTO -->
+<!-- MODAL: NOVA / EDITAR REUNIÃO -->
+<div class="modal-overlay" id="modal-reuniao" style="display:none" onclick="if(event.target===this)fecharModalReuniao()">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header">
+      <h2 style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-calendar-plus" style="color:var(--usga-mid)"></i>
+        <span id="reu-modal-titulo">Nova reunião</span>
+      </h2>
+      <button class="modal-close" onclick="fecharModalReuniao()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" style="padding:20px 24px 24px">
+      <div class="ci-form" style="padding:0">
+        <div class="form-group full">
+          <label>Assunto <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="reu-titulo" maxlength="150" placeholder="Ex: Reunião de planejamento da safra">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Data <span style="color:var(--danger)">*</span></label>
+            <input type="date" id="reu-data">
+          </div>
+          <div class="form-group" style="display:flex;gap:10px;flex-direction:row">
+            <div style="flex:1"><label>Início</label><input type="time" id="reu-inicio" style="width:100%"></div>
+            <div style="flex:1"><label>Fim</label><input type="time" id="reu-fim" style="width:100%"></div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label>Modalidade</label>
+          <div style="display:flex;gap:16px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500">
+              <input type="radio" name="reu-modalidade" value="presencial" checked onchange="onModalidadeReuniao()"> <i class="ti ti-map-pin"></i> Presencial
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500">
+              <input type="radio" name="reu-modalidade" value="online" onchange="onModalidadeReuniao()"> <i class="ti ti-video"></i> Online
+            </label>
+          </div>
+        </div>
+        <div class="form-group full" id="reu-local-wrap">
+          <label>Local <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="reu-local" maxlength="200" placeholder="Ex: Sala de reuniões do escritório central">
+        </div>
+        <div class="form-group full" id="reu-link-wrap" style="display:none">
+          <label>Link da reunião <span style="color:var(--danger)">*</span></label>
+          <input type="url" id="reu-link" maxlength="500" placeholder="https://meet.google.com/... ou link do Teams/Zoom">
+        </div>
+        <div class="form-group full">
+          <label>Pauta / descrição <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+          <textarea id="reu-descricao" maxlength="2000" style="min-height:70px" placeholder="Assuntos que serão tratados..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Convidados <span style="color:var(--danger)">*</span></label>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="reu-dept" onchange="carregarUsuariosDeptReuniao()" style="flex:1;min-width:180px">
+              <option value="">Escolha um departamento...</option>
+            </select>
+            <button class="btn-ghost" id="reu-todos-dept" onclick="marcarTodosDeptReuniao()" style="display:none"><i class="ti ti-checks"></i> Todos do setor</button>
+          </div>
+          <div id="reu-usuarios-lista" class="reu-usuarios-lista" style="display:none"></div>
+          <div id="reu-chips" class="reu-chips"></div>
+        </div>
+        <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px">
+          <button class="btn btn-ghost" onclick="fecharModalReuniao()">Cancelar</button>
+          <button class="btn btn-primary" id="reu-btn-salvar" onclick="salvarReuniao()"><i class="ti ti-check"></i> Marcar reunião</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-novo-dept" style="display:none" onclick="if(event.target===this)fecharModalNovoDept()">
   <div class="modal" style="max-width:420px">
     <div class="modal-header">

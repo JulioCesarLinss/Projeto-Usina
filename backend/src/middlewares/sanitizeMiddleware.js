@@ -9,7 +9,9 @@ const SQL_PATTERNS = [
 const XSS_PATTERNS = [
   /<script[\s\S]*?>[\s\S]*?<\/script>/gi,
   /javascript\s*:/gi,
-  /on\w+\s*=/gi,
+  // evento HTML (onclick=, onerror=...) só é perigoso dentro de uma tag; fora dela
+  // bloquearia links comuns, como os do Teams (?context=...)
+  /<[^>]*\son\w+\s*=/gi,
   /<\s*(iframe|object|embed)/gi,
 ];
 
