@@ -1351,6 +1351,18 @@ body.dark .top-accent {
   background: linear-gradient(90deg, #0A1206 0%, #2D6A10 50%, #5A3A1A 100%);
 }
 
+/* ── MODAL DE CONFIRMAÇÃO ── */
+.confirmar-icone {
+  width: 52px; height: 52px; margin: 0 auto; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 26px;
+  background: var(--usga-xpale); color: var(--usga-mid);
+}
+.confirmar-icone.perigo { background: #FCEAE8; color: var(--danger); }
+.btn.btn-perigo { background: var(--danger); border-color: var(--danger); color: white; }
+.btn.btn-perigo:hover { background: #A82E22; }
+body.dark .confirmar-icone { background: #1A2E10; }
+body.dark .confirmar-icone.perigo { background: rgba(239,68,68,0.15); }
+
 /* ── REUNIÕES (agenda) ── */
 .reu-form-horario { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
 @media (max-width: 520px) { .reu-form-horario { grid-template-columns: 1fr 1fr; } .reu-form-horario .form-group:first-child { grid-column: 1 / -1; } }

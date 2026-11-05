@@ -884,7 +884,12 @@ async function decidirCI(acao) {
   const ci = state.ciAtual; if (!ci) return;
   const texto = document.getElementById('modal-aprovacao-texto').value.trim();
   if (acao === 'ajustes' && texto.length < 3) { toast('Escreva o que deseja que seja modificado.', 'error'); return; }
-  if (acao === 'aprovar' && !confirm('Confirma que leu esta C.I. e está de acordo com o envio em seu nome?')) return;
+  if (acao === 'aprovar' && !(await confirmarAcao({
+    titulo: 'Aprovar e enviar?',
+    mensagem: 'Confirma que leu esta C.I. e está de acordo com o envio em seu nome?',
+    botao: 'Li e estou de acordo',
+    icone: 'ti-signature'
+  }))) return;
   try {
     await api('POST', '/comunicacoes/' + ci.id + (acao === 'aprovar' ? '/aprovar' : '/solicitar-ajustes'), { texto });
     toast(acao === 'aprovar' ? 'C.I. aprovada e enviada.' : 'Ajustes solicitados ao autor.');
@@ -2251,6 +2256,36 @@ function aplicarDarkModeInicial() {
 }
 
 // ═══════════════════════════════════════════════════════
+//  CONFIRMAÇÃO — janela no visual do sistema (no lugar do confirm() do navegador)
+//  uso: if (!(await confirmarAcao({ titulo, mensagem, botao, perigo: true }))) return;
+// ═══════════════════════════════════════════════════════
+let _resolverConfirmacao = null;
+
+function confirmarAcao({ titulo = 'Confirmar', mensagem = '', botao = 'Confirmar', voltar = 'Voltar', perigo = false, icone } = {}) {
+  document.getElementById('confirmar-titulo').textContent = titulo;
+  document.getElementById('confirmar-mensagem').textContent = mensagem;
+  const iconeEl = document.getElementById('confirmar-icone');
+  iconeEl.className = 'confirmar-icone' + (perigo ? ' perigo' : '');
+  iconeEl.innerHTML = `<i class="ti ${icone || (perigo ? 'ti-alert-triangle' : 'ti-help-circle')}"></i>`;
+  const sim = document.getElementById('confirmar-btn-sim');
+  sim.textContent = botao;
+  sim.className = 'btn ' + (perigo ? 'btn-perigo' : 'btn-primary');
+  document.getElementById('confirmar-btn-nao').textContent = voltar;
+  document.getElementById('modal-confirmar').style.display = 'flex';
+  setTimeout(() => document.getElementById('confirmar-btn-nao').focus(), 50);
+  return new Promise(resolve => { _resolverConfirmacao = resolve; });
+}
+
+function responderConfirmacao(resposta) {
+  document.getElementById('modal-confirmar').style.display = 'none';
+  if (_resolverConfirmacao) { _resolverConfirmacao(resposta); _resolverConfirmacao = null; }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('modal-confirmar')?.style.display === 'flex') responderConfirmacao(false);
+});
+
+// ═══════════════════════════════════════════════════════
 //  REUNIÕES — agenda (calendário do mês + lista do dia)
 // ═══════════════════════════════════════════════════════
 // supervisor (3), gerente (2) e secretário (5) marcam; os demais só veem as reuniões para as quais foram convidados
@@ -2425,7 +2460,15 @@ async function responderReuniao(id, resposta) {
 }
 
 async function cancelarReuniao(id) {
-  if (!confirm('Cancelar esta reunião? Todos os convidados serão avisados.')) return;
+  const ok = await confirmarAcao({
+    titulo: 'Cancelar reunião?',
+    mensagem: 'Todos os convidados serão avisados do cancelamento. Essa ação não pode ser desfeita.',
+    botao: 'Sim, cancelar reunião',
+    voltar: 'Manter reunião',
+    perigo: true,
+    icone: 'ti-calendar-x'
+  });
+  if (!ok) return;
   try {
     const data = await api('POST', `/reunioes/${id}/cancelar`);
     toast(data.mensagem);
