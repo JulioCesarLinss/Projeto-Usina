@@ -105,11 +105,12 @@ export const cancelar = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// POST /api/reunioes/:id/responder { resposta: 'vou' | 'nao_vou' } — convidado
+// POST /api/reunioes/:id/responder — convidado confirma presença ({ resposta: 'vou' })
+// ou desfaz a confirmação ({ resposta: 'pendente' })
 export const responder = async (req, res, next) => {
   try {
     const { resposta } = req.body || {};
-    if (!['vou', 'nao_vou'].includes(resposta))
+    if (!['vou', 'pendente'].includes(resposta))
       throw new ValidationError('Resposta inválida', 'RESPOSTA_INVALIDA', []);
     const r = await carregar(req.params.id);
     if (!(await reuniaoModel.ehParticipante(r.id, req.usuario.id)))
@@ -117,6 +118,6 @@ export const responder = async (req, res, next) => {
     if (r.estado !== 'agendada') throw new ConflictError('Esta reunião foi cancelada', 'REUNIAO_CANCELADA');
     if (r.ja_comecou) throw new ConflictError('Esta reunião já começou ou já aconteceu', 'REUNIAO_PASSADA');
     await reuniaoModel.responder(r.id, req.usuario.id, resposta);
-    res.status(200).json({ sucesso: true, mensagem: resposta === 'vou' ? 'Presença confirmada' : 'Ausência registrada' });
+    res.status(200).json({ sucesso: true, mensagem: resposta === 'vou' ? 'Presença confirmada' : 'Confirmação de presença desfeita' });
   } catch (err) { next(err); }
 };

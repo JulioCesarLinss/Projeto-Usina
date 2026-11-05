@@ -394,6 +394,7 @@ async function iniciarApp() {
   carregarDeptDashboard();
   if (state.usuario.cargo_id <= 2) carregarAuditDashboard();
   aplicarPermissoesFrontend(state.usuario);
+  iniciarNotificacoesTempoReal();
 }
 
 function verificarSessao() {
@@ -986,10 +987,74 @@ async function confirmarLeituraAtual() {
 // ═══════════════════════════════════════════════════════
 //  NOTIFICAÇÕES
 // ═══════════════════════════════════════════════════════
+// ── notificações em tempo (quase) real ──
+// A cada 15 s (só com a aba visível) busca as notificações; as que chegaram desde a
+// última busca aparecem num pop-up no canto da tela e as listas da tela são atualizadas.
+const NOTIF_INTERVALO = 15000;
+let ultimaNotifId = null;   // maior id já visto (null = ainda não carregou)
+let notifTimer = null;
+
+function iniciarNotificacoesTempoReal() {
+  if (notifTimer) return;
+  notifTimer = setInterval(() => {
+    if (document.hidden || !state.token) return;
+    carregarNotificacoes();
+    // com a agenda aberta, atualiza também as confirmações de presença (sem fechar listas abertas)
+    if (document.getElementById('page-reunioes')?.style.display !== 'none'
+        && document.getElementById('modal-reuniao')?.style.display !== 'flex'
+        && !document.querySelector('.reu-participantes:not([style*="none"])')) carregarReunioes();
+  }, NOTIF_INTERVALO);
+  // ao voltar para a aba, busca na hora
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && state.token) carregarNotificacoes(); });
+}
+
+function detectarNovasNotificacoes(notifs) {
+  const maiorId = notifs.reduce((m, n) => Math.max(m, n.id), 0);
+  if (ultimaNotifId === null) { ultimaNotifId = maiorId; return; } // primeira carga: sem pop-up
+  const novas = notifs.filter(n => n.id > ultimaNotifId && !n.lida).sort((a, b) => a.id - b.id);
+  ultimaNotifId = Math.max(ultimaNotifId, maiorId);
+  if (novas.length === 0) return;
+
+  novas.slice(-3).forEach(mostrarPopupNotificacao);
+  if (novas.length > 3) mostrarPopupNotificacao({ mensagem: `E mais ${novas.length - 3} notificação(ões) — veja no sino.`, extra: true });
+
+  // atualiza o que estiver na tela
+  if (novas.some(n => n.comunicacao_id)) { carregarCIs(); carregarAprovacoes(); atualizarStats(); }
+  if (novas.some(n => n.reuniao_id) && document.getElementById('page-reunioes')?.style.display !== 'none') carregarReunioes();
+}
+
+function mostrarPopupNotificacao(n) {
+  const box = document.getElementById('notif-popups');
+  if (!box) return;
+  const el = document.createElement('div');
+  el.className = 'notif-popup';
+  const reuniao = !!n.reuniao_id;
+  el.innerHTML = `
+    <div class="notif-popup-icone ${reuniao ? 'reuniao' : ''}"><i class="ti ${reuniao ? 'ti-calendar-event' : 'ti-bell-ringing'}"></i></div>
+    <div class="notif-popup-corpo">
+      <div class="notif-popup-titulo">${n.extra ? 'Notificações' : reuniao ? 'Reunião' : 'Nova notificação'}</div>
+      <div class="notif-popup-texto">${escHtml(n.mensagem)}</div>
+    </div>
+    <button class="notif-popup-fechar" title="Fechar"><i class="ti ti-x"></i></button>`;
+  const fechar = () => { el.classList.add('saindo'); setTimeout(() => el.remove(), 250); };
+  el.querySelector('.notif-popup-fechar').onclick = (e) => { e.stopPropagation(); fechar(); };
+  el.onclick = async () => {
+    fechar();
+    if (!n.id) return;
+    try { await api('PATCH', '/notificacoes/' + n.id + '/lida'); } catch (e) { /* segue */ }
+    if (n.reuniao_id) abrirReuniaoNaAgenda(n.reuniao_id);
+    else if (n.comunicacao_id) abrirCIDoBackend(n.comunicacao_id);
+    carregarNotificacoes();
+  };
+  box.appendChild(el);
+  setTimeout(fechar, 9000);
+}
+
 async function carregarNotificacoes() {
   try {
     const data = await api('GET', '/notificacoes/listar');
     const notifs = data.dados || [];
+    detectarNovasNotificacoes(notifs);
     const naoLidas = notifs.filter(n => !n.lida && !n.data_leitura).length;
     const badge = document.getElementById('notif-badge');
     const dot = document.getElementById('notif-dot');
@@ -1009,7 +1074,7 @@ async function carregarNotificacoes() {
         return `<div class="notif-item unread" onclick="marcarNotifLida(${n.id}, this);${abrir}" style="cursor:pointer">
           <div class="notif-icon recv"><i class="ti ti-bell"></i></div>
           <div class="notif-body">
-            <div class="notif-text">${n.mensagem}</div>
+            <div class="notif-text">${escHtml(n.mensagem)}</div>
             <div class="notif-time">${tempo}</div>
           </div>
           <div class="notif-unread-dot"></div>
@@ -1231,17 +1296,38 @@ function limparFormularioCI() {
   document.getElementById('ci-prioridade').value = 'normal';
   document.getElementById('ci-prazo').value = '';
   atualizarOpcaoUrgente();
-  document.getElementById('ci-arquivo').value = '';
-  document.getElementById('upload-label').textContent = 'PDF, DOCX, XLSX, PNG — máx. 20 MB por arquivo';
+  removerArquivoCI();
   document.getElementById('ci-destinatarios-wrap').style.display = 'none';
   document.getElementById('ci-usuarios-lista').style.display = 'none';
   document.getElementById('ci-usuarios-lista').innerHTML = '';
   document.querySelector('input[name="ci-dest-tipo"][value="todos"]').checked = true;
 }
 
+const ANEXO_MAX_BYTES = 20 * 1024 * 1024;
+
+// mostra o arquivo escolhido (com botões de trocar e remover) no lugar da área de upload
 function atualizarNomeArquivo() {
-  const arquivo = document.getElementById('ci-arquivo').files[0];
-  if (arquivo) document.getElementById('upload-label').textContent = '📎 ' + arquivo.name;
+  const input = document.getElementById('ci-arquivo');
+  const arquivo = input.files[0];
+  if (!arquivo) return;
+  if (arquivo.size > ANEXO_MAX_BYTES) {
+    toast('O arquivo passa de 20 MB. Escolha um arquivo menor.', 'error');
+    removerArquivoCI();
+    return;
+  }
+  const tam = arquivo.size >= 1024 * 1024
+    ? (arquivo.size / 1024 / 1024).toFixed(1) + ' MB'
+    : Math.max(1, Math.round(arquivo.size / 1024)) + ' KB';
+  document.getElementById('ci-arquivo-nome').textContent = arquivo.name;
+  document.getElementById('ci-arquivo-tam').textContent = tam;
+  document.getElementById('ci-arquivo-escolhido').style.display = 'flex';
+  document.getElementById('upload-area').style.display = 'none';
+}
+
+function removerArquivoCI() {
+  document.getElementById('ci-arquivo').value = '';
+  document.getElementById('ci-arquivo-escolhido').style.display = 'none';
+  document.getElementById('upload-area').style.display = '';
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2401,18 +2487,19 @@ function renderizarDiaReunioes() {
       if (ehOrg) {
         acoes = `<button class="btn-ghost" onclick="abrirModalReuniao(${r.id})"><i class="ti ti-edit"></i> Editar</button>
                  <button class="btn-ghost" style="color:var(--danger)" onclick="cancelarReuniao(${r.id})"><i class="ti ti-calendar-x"></i> Cancelar</button>`;
+      } else if (r.minha_resposta === 'vou') {
+        acoes = `<span class="reu-confirmada"><i class="ti ti-circle-check"></i> Presença confirmada</span>
+                 <button class="reu-desfazer" onclick="responderReuniao(${r.id},'pendente')">desfazer</button>`;
       } else {
-        acoes = `<button class="reu-resp ${r.minha_resposta === 'vou' ? 'ativo vou' : ''}" onclick="responderReuniao(${r.id},'vou')"><i class="ti ti-check"></i> Vou</button>
-                 <button class="reu-resp ${r.minha_resposta === 'nao_vou' ? 'ativo nao' : ''}" onclick="responderReuniao(${r.id},'nao_vou')"><i class="ti ti-x"></i> Não vou</button>`;
+        acoes = `<button class="reu-resp" onclick="responderReuniao(${r.id},'vou')"><i class="ti ti-check"></i> Confirmar presença</button>`;
       }
-    } else if (!ehOrg && r.minha_resposta && r.minha_resposta !== 'pendente') {
-      acoes = `<span class="reu-onde">Sua resposta: ${r.minha_resposta === 'vou' ? 'Vou' : 'Não vou'}</span>`;
+    } else if (!ehOrg && r.minha_resposta === 'vou') {
+      acoes = `<span class="reu-confirmada"><i class="ti ti-circle-check"></i> Você confirmou presença</span>`;
     }
 
-    const pendentes = r.total_convidados - r.total_vou - r.total_nao_vou;
     const presenca = ehOrg
       ? `<button class="reu-presenca" onclick="alternarParticipantesReuniao(${r.id})">
-           <i class="ti ti-users"></i> ${r.total_vou} vão · ${r.total_nao_vou} não vão · ${pendentes} sem resposta
+           <i class="ti ti-users"></i> ${r.total_vou} de ${r.total_convidados} confirmaram presença
            <i class="ti ti-chevron-down"></i>
          </button>
          <div class="reu-participantes" id="reu-part-${r.id}" style="display:none"></div>`
@@ -2442,12 +2529,13 @@ async function alternarParticipantesReuniao(id) {
   box.innerHTML = '<span class="spin"></span>';
   try {
     const { dados } = await api('GET', '/reunioes/' + id);
-    const ROT = { vou: ['vou', 'Vai'], nao_vou: ['nao', 'Não vai'], pendente: ['pend', 'Sem resposta'] };
-    box.innerHTML = dados.participantes.map(p => `
-      <div class="reu-part-linha">
+    box.innerHTML = dados.participantes.map(p => {
+      const confirmou = p.resposta === 'vou';
+      return `<div class="reu-part-linha">
         <span>${escHtml(p.nome)} <small>${escHtml(p.departamento_nome || '')}</small></span>
-        <span class="reu-part-resp ${ROT[p.resposta][0]}">${ROT[p.resposta][1]}</span>
-      </div>`).join('');
+        <span class="reu-part-resp ${confirmou ? 'vou' : 'pend'}">${confirmou ? '✓ Presença confirmada' : 'Aguardando confirmação'}</span>
+      </div>`;
+    }).join('');
   } catch (err) { box.innerHTML = escHtml(err.message); }
 }
 

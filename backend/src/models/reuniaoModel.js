@@ -103,7 +103,7 @@ export const listarParticipantes = async (id) => {
      INNER JOIN usuario u ON u.id = p.usuario_id
      LEFT JOIN departamento dep ON dep.id = u.departamento_id
      WHERE p.reuniao_id = ?
-     ORDER BY FIELD(p.resposta, 'vou', 'pendente', 'nao_vou'), u.nome`, [id]);
+     ORDER BY (p.resposta = 'vou') DESC, u.nome`, [id]);
   return rows;
 };
 
@@ -115,7 +115,8 @@ export const ehParticipante = async (id, usuario_id) => {
 
 export const responder = async (id, usuario_id, resposta) => {
   const [r] = await pool.query(
-    'UPDATE reuniao_participante SET resposta = ?, respondido_em = NOW() WHERE reuniao_id = ? AND usuario_id = ?',
+    `UPDATE reuniao_participante SET resposta = ?, respondido_em = ${resposta === 'pendente' ? 'NULL' : 'NOW()'}
+     WHERE reuniao_id = ? AND usuario_id = ?`,
     [resposta, id, usuario_id]);
   return r.affectedRows;
 };

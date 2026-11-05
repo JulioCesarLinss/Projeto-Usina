@@ -705,6 +705,23 @@ textarea { resize: vertical; min-height: 80px; }
 .upload-area p { font-size: 12px; color: var(--text-muted); }
 .upload-area strong { color: var(--usga-mid); }
 
+/* arquivo escolhido no formulário da C.I. (com trocar / remover) */
+.arquivo-escolhido {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border: 1px solid var(--border-mid); border-radius: var(--radius); background: var(--usga-xpale);
+}
+.arquivo-escolhido > i { font-size: 18px; color: var(--usga-mid); }
+.arquivo-escolhido span { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arquivo-escolhido small { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.arquivo-escolhido button {
+  border: none; background: transparent; cursor: pointer; width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 16px;
+}
+.arquivo-escolhido button:hover { background: var(--white); color: var(--usga-mid); }
+.arquivo-escolhido .arquivo-remover:hover { color: var(--danger); }
+body.dark .arquivo-escolhido { background: #1A2E10; }
+body.dark .arquivo-escolhido button:hover { background: #132813; }
+
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
 
 /* ── AUDIT TRAIL ── */
@@ -1142,6 +1159,28 @@ body.dark .tab-search-wrap:focus-within { background: #1E321E; }
 .toast.info    { background: var(--info); }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
 
+/* pop-up de notificação nova (canto superior direito) */
+#notif-popups { position: fixed; top: 76px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; width: 340px; max-width: calc(100vw - 32px); }
+.notif-popup {
+  display: flex; gap: 12px; align-items: flex-start; padding: 12px 12px 12px 14px;
+  background: var(--white); border: 1px solid var(--border-mid); border-left: 4px solid var(--usga-mid);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg); cursor: pointer;
+  animation: slideIn .25s ease; transition: opacity .25s, transform .25s;
+}
+.notif-popup:hover { background: var(--usga-xpale); }
+.notif-popup.saindo { opacity: 0; transform: translateX(30px); }
+.notif-popup-icone { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--usga-xpale); color: var(--usga-mid); font-size: 18px; }
+.notif-popup-icone.reuniao { background: #E8F2FA; color: var(--info); }
+.notif-popup-corpo { flex: 1; min-width: 0; }
+.notif-popup-titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
+.notif-popup-texto { font-size: 13.5px; color: var(--text-primary); margin-top: 2px; word-wrap: break-word; }
+.notif-popup-fechar { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 15px; padding: 2px; }
+.notif-popup-fechar:hover { color: var(--danger); }
+body.dark .notif-popup { background: #132813; border-color: rgba(37,60,24,0.8); border-left-color: #43931F; }
+body.dark .notif-popup:hover { background: #1A2712; }
+body.dark .notif-popup-icone { background: #1A2E10; }
+body.dark .notif-popup-icone.reuniao { background: #0D1F2A; color: #5BA3D0; }
+
 /* ── EMPTY STATE ── */
 .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
 .empty-state i { font-size: 36px; margin-bottom: 10px; opacity: .4; }
@@ -1416,6 +1455,10 @@ body.dark .confirmar-icone.perigo { background: rgba(239,68,68,0.15); }
 .reu-resp:hover { background: var(--surface); }
 .reu-resp.ativo.vou { background: var(--usga-mid); color: white; border-color: var(--usga-mid); }
 .reu-resp.ativo.nao { background: var(--danger); color: white; border-color: var(--danger); }
+.reu-confirmada { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: var(--usga-mid); }
+.reu-confirmada i { font-size: 17px; }
+.reu-desfazer { border: none; background: none; padding: 0; font-size: 12px; color: var(--text-muted); text-decoration: underline; cursor: pointer; font-family: inherit; }
+.reu-desfazer:hover { color: var(--danger); }
 .reu-presenca { margin-top: 10px; background: none; border: none; padding: 0; font-size: 12px; color: var(--text-muted); cursor: pointer; display: inline-flex; gap: 4px; align-items: center; font-family: inherit; }
 .reu-presenca:hover { color: var(--usga-mid); }
 .reu-participantes { margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }

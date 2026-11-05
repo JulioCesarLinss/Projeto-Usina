@@ -43,9 +43,10 @@ app.use(cors({
 }));
 app.options('*', cors());
 
-// 3º — Limita requisições por IP
-// Máximo 100 requisições por minuto por IP
-app.use(rateLimiter({ windowMs: 60000, max: 100 }));
+// 3º — Limita requisições: por usuário logado (120/min) ou, sem login, por IP (600/min).
+// Na empresa todos saem pelo mesmo IP, então o limite por IP sozinho bloquearia todo mundo.
+// Ajustável no .env: RATE_LIMIT_USUARIO, RATE_LIMIT_IP, RATE_LOGIN_CONTA, RATE_LOGIN_IP
+app.use(rateLimiter({ windowMs: 60000 }));
 
 // 4º — Lê o corpo da requisição com limite de tamanho
 // O limite de 1mb evita ataques de payload gigante
