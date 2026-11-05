@@ -662,6 +662,8 @@ label {
 
 input[type="text"],
 input[type="date"],
+input[type="time"],
+input[type="url"],
 select,
 textarea {
   font-family: var(--font-body);
@@ -1271,6 +1273,8 @@ body.dark .search-box:focus-within { background: #1E321E; }
 
 body.dark input[type="text"],
 body.dark input[type="date"],
+body.dark input[type="time"],
+body.dark input[type="url"],
 body.dark input[type="email"],
 body.dark input[type="password"],
 body.dark select,
@@ -1348,6 +1352,8 @@ body.dark .top-accent {
 }
 
 /* ── REUNIÕES (agenda) ── */
+.reu-form-horario { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .reu-form-horario { grid-template-columns: 1fr 1fr; } .reu-form-horario .form-group:first-child { grid-column: 1 / -1; } }
 .reu-layout { display: grid; grid-template-columns: minmax(320px, 1.1fr) 1fr; gap: 20px; align-items: start; }
 .reu-cal { padding: 0 16px 8px; }
 .reu-cal-semana, .reu-cal-grade { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
